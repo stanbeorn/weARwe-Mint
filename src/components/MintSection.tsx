@@ -465,15 +465,17 @@ export function MintSection({ currentPhase, timeLeft, totalMinted, setTotalMinte
   const getPhaseStatus = () => {
     const currentTime = new Date();
     
-    // Phase start and end times
-    const ogStartTime = new Date(Date.UTC(2025, 1, 7, 17, 0, 0));  // Feb 7th, 17:00 UTC
-    const ogEndTime = new Date(Date.UTC(2025, 1, 9, 17, 0, 0));    // Feb 9th, 17:00 UTC (48 hours later)
-    const fcfsEndTime = new Date(Date.UTC(2025, 1, 7, 19, 0, 0));  // Feb 7th, 19:00 UTC (2 hours after start)
+    // Time constants for phases
+    const ogStartTime = new Date(Date.UTC(2025, 1, 9, 1, 0, 0));    // Feb 9th, 02:00 CET (01:00 UTC)
+    const ogEndTime = new Date(Date.UTC(2025, 1, 11, 1, 0, 0));     // Feb 11th, 02:00 CET (01:00 UTC)
+    const fcfsStartTime = new Date(Date.UTC(2025, 1, 9, 17, 0, 0)); // Feb 9th, 18:00 CET (17:00 UTC)
+    const fcfsEndTime = new Date(Date.UTC(2025, 1, 9, 23, 0, 0));   // Feb 10th, 00:00 CET (23:00 UTC)
+    const publicStartTime = new Date(Date.UTC(2025, 1, 9, 22, 59, 0)); // Feb 9th, 23:59 CET (22:59 UTC)
     
     const hasStarted = currentTime >= ogStartTime;
     const ogPhaseActive = currentTime >= ogStartTime && currentTime < ogEndTime;
-    const fcfsPhaseActive = currentTime >= ogStartTime && currentTime < fcfsEndTime;
-    const publicPhaseActive = currentTime >= fcfsEndTime;
+    const fcfsPhaseActive = currentTime >= fcfsStartTime && currentTime < fcfsEndTime;
+    const publicPhaseActive = currentTime >= publicStartTime;
     
     const ogPhaseCompleted = currentTime >= ogEndTime;
     const fcfsPhaseCompleted = currentTime >= fcfsEndTime;
@@ -481,7 +483,7 @@ export function MintSection({ currentPhase, timeLeft, totalMinted, setTotalMinte
     return {
       og: {
         name: 'OG Phase',
-        status: !hasStarted ? 'Starts 7th Feb 17:00 UTC' : 
+        status: !hasStarted ? 'Starts 9th Feb 02:00 CET' : 
                ogPhaseCompleted ? 'Completed' :
                'Active - Guaranteed Mint (48 Hours)',
         time: !hasStarted ? timeLeft.og :
@@ -492,9 +494,9 @@ export function MintSection({ currentPhase, timeLeft, totalMinted, setTotalMinte
       },
       fcfs: {
         name: 'FCFS Phase',
-        status: !hasStarted ? 'Starts 7th Feb 17:00 UTC' : 
+        status: !hasStarted ? 'Starts 9th Feb 02:00 CET' : 
                fcfsPhaseCompleted ? 'Completed' :
-               'Active - First Come First Served (2 Hours)',
+               'Active - First Come First Served (6 Hours)',
         time: !hasStarted ? timeLeft.fcfs :
               fcfsPhaseCompleted ? '' : timeLeft.fcfs,
         label: !hasStarted ? 'Time Until Start' :
@@ -503,7 +505,7 @@ export function MintSection({ currentPhase, timeLeft, totalMinted, setTotalMinte
       },
       public: {
         name: 'Public Phase',
-        status: publicPhaseActive ? 'Active - Open for Everyone (1 Week)' : 'Starts 7th Feb 19:00 UTC',
+        status: publicPhaseActive ? 'Active - Open for Everyone (1 Week)' : 'Starts 9th Feb 23:59 CET',
         time: !publicPhaseActive && timeLeft.public ? timeLeft.public : '',
         label: !publicPhaseActive && timeLeft.public ? 'Time Until Start' : '',
         completed: false
@@ -513,7 +515,7 @@ export function MintSection({ currentPhase, timeLeft, totalMinted, setTotalMinte
 
   const isMintingEnabled = () => {
     const currentTime = new Date();
-    const startTime = new Date(Date.UTC(2025, 1, 7, 17, 0, 0)); // Feb 7th, 17:00 UTC
+    const startTime = new Date(Date.UTC(2025, 1, 9, 1, 0, 0)); // Feb 9th, 02:00 CET (01:00 UTC)
     return currentTime >= startTime;
   };
 

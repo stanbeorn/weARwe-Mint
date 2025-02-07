@@ -50,17 +50,20 @@ function App() {
     const calculateTimeLeft = () => {
       const now = new Date();
       
-      // OG and FCFS start time: Feb 7th, 17:00 UTC
-      const ogStartDate = new Date(Date.UTC(2025, 1, 7, 17, 0, 0));
+      // OG Minting: Starts Feb 9th 02:00 CET (01:00 UTC) for 48 hours
+      const ogStartDate = new Date(Date.UTC(2025, 1, 9, 1, 0, 0));
       
-      // OG ends after 48 hours: Feb 9th, 17:00 UTC
-      const ogEndDate = new Date(Date.UTC(2025, 1, 9, 17, 0, 0));
+      // OG ends after 48 hours: Feb 11th 02:00 CET (01:00 UTC)
+      const ogEndDate = new Date(Date.UTC(2025, 1, 11, 1, 0, 0));
       
-      // FCFS ends after 2 hours: Feb 7th, 19:00 UTC
-      const fcfsEndDate = new Date(Date.UTC(2025, 1, 7, 19, 0, 0));
+      // FCFS starts Feb 9th 18:00 CET (17:00 UTC)
+      const fcfsStartDate = new Date(Date.UTC(2025, 1, 9, 17, 0, 0));
       
-      // Public starts when FCFS ends: Feb 7th, 19:00 UTC
-      const publicStartDate = fcfsEndDate;
+      // FCFS ends at Feb 10th 00:00 CET (23:00 UTC)
+      const fcfsEndDate = new Date(Date.UTC(2025, 1, 9, 23, 0, 0));
+      
+      // Public starts Feb 9th 23:59 CET (22:59 UTC)
+      const publicStartDate = new Date(Date.UTC(2025, 1, 9, 22, 59, 0));
 
       const calculateTimeUntilStart = (startDate: Date) => {
         const difference = startDate.getTime() - now.getTime();
@@ -112,7 +115,7 @@ function App() {
       setTimeLeft({
         og: now < ogStartDate ? calculateTimeUntilStart(ogStartDate) : 
             now < ogEndDate ? calculateTimeRemaining(ogEndDate) : '',
-        fcfs: now < ogStartDate ? calculateTimeUntilStart(ogStartDate) : 
+        fcfs: now < fcfsStartDate ? calculateTimeUntilStart(fcfsStartDate) : 
               now < fcfsEndDate ? calculateTimeRemaining(fcfsEndDate) : '',
         public: now < publicStartDate ? calculateTimeUntilStart(publicStartDate) : ''
       });
