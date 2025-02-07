@@ -49,16 +49,16 @@ function App() {
   useEffect(() => {
     const calculateTimeLeft = () => {
       const now = new Date();
-      
+
       // OG and FCFS start time: Feb 7th, 17:00 UTC
       const ogStartDate = new Date(Date.UTC(2025, 1, 7, 17, 0, 0));
-      
+
       // OG ends after 48 hours: Feb 9th, 17:00 UTC
       const ogEndDate = new Date(Date.UTC(2025, 1, 9, 17, 0, 0));
-      
+
       // FCFS ends after 2 hours: Feb 7th, 19:00 UTC
       const fcfsEndDate = new Date(Date.UTC(2025, 1, 7, 19, 0, 0));
-      
+
       // Public starts when FCFS ends: Feb 7th, 19:00 UTC
       const publicStartDate = fcfsEndDate;
 
@@ -110,10 +110,10 @@ function App() {
       }
 
       setTimeLeft({
-        og: now < ogStartDate ? calculateTimeUntilStart(ogStartDate) : 
-            now < ogEndDate ? calculateTimeRemaining(ogEndDate) : '',
-        fcfs: now < ogStartDate ? calculateTimeUntilStart(ogStartDate) : 
-              now < fcfsEndDate ? calculateTimeRemaining(fcfsEndDate) : '',
+        og: now < ogStartDate ? calculateTimeUntilStart(ogStartDate) :
+          now < ogEndDate ? calculateTimeRemaining(ogEndDate) : '',
+        fcfs: now < ogStartDate ? calculateTimeUntilStart(ogStartDate) :
+          now < fcfsEndDate ? calculateTimeRemaining(fcfsEndDate) : '',
         public: now < publicStartDate ? calculateTimeUntilStart(publicStartDate) : ''
       });
     };
@@ -130,8 +130,6 @@ function App() {
         <MintSection
           currentPhase={currentPhase}
           timeLeft={timeLeft}
-          totalMinted={totalMinted}
-          setTotalMinted={setTotalMinted}
         />
       </ContentWrapper>
       <ThreeWrapper>

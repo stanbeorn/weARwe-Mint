@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { NftSaleClient, PurchaseNftError } from 'ao-process-clients';
+import { getNftSaleClientAutoConfiguration, INftSaleClient, NftSaleClient, NftSaleClientConfig, processIds, PurchaseNftError } from 'ao-process-clients';
 
 // ArConnect type declarations
 declare global {
@@ -364,25 +364,55 @@ interface MintSectionProps {
     fcfs: string;
     public: string;
   };
-  totalMinted: number;
-  setTotalMinted: React.Dispatch<React.SetStateAction<number>>;
 }
 
-export function MintSection({ currentPhase, timeLeft, totalMinted, setTotalMinted }: MintSectionProps) {
+export function MintSection({ currentPhase, timeLeft }: MintSectionProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [error, setError] = useState<string | null>(null);
-  const [nftSaleClient, setNftSaleClient] = useState<NftSaleClient | null>(null);
+  const [nftSaleClient, setNftSaleClient] = useState<INftSaleClient | null>(null);
+  const [totalMinted, setTotalMinted] = useState(0);
+
+  // Update total minted NFTs when client is initialized
+  useEffect(() => {
+    const updateTotalMinted = async () => {
+      if (nftSaleClient) {
+        try {
+          const nftsLeft = await nftSaleClient.queryNFTCount();
+          console.log(nftsLeft)
+          const TOTAL_NFTS_AVAILABLE_THIS_ROUND = 333;
+          const NFTS_SOLD_PREVIOUS_SALE = 333; // Constant for NFTs sold in previous sale
+
+          const nftsSoldThisRound = Math.abs(nftsLeft - TOTAL_NFTS_AVAILABLE_THIS_ROUND);
+          console.log(nftsSoldThisRound)
+          const totalNftsSold = NFTS_SOLD_PREVIOUS_SALE + nftsSoldThisRound;
+          console.log(nftsSoldThisRound)
+          setTotalMinted(totalNftsSold);
+        } catch (error) {
+          console.error('Failed to update total minted:', error);
+        }
+      }
+    };
+
+    updateTotalMinted();
+  }, [nftSaleClient]);
 
   const initializeClient = async () => {
     try {
       console.log('Initializing NFT client...');
-      
+
       // Initialize client with auto configuration
-      const client = await NftSaleClient.createAutoConfigured();
-      
+      // DONT TOUCH VERY IMPORTANT
+      const config: NftSaleClientConfig = getNftSaleClientAutoConfiguration()
+      config.processId = "y__FX6IgcXDOlOIEZqWZDU1k1dxYSpBICf-wxv25Tj0" // TODO swap to final sale contract
+      config.purchaseAmount = "500000000000"
+      config.tokenProcessId = "5ZR9uegKoEhE9fJMbs-MvWLIztMNCVxgpzfeBVE3vqI" //processIds.WRAPPED_AR_TOKEN_PROCESS_ID //TODO wAR
+      const client = await NftSaleClient.create(config);
+      await client.queryNFTCount()
+      // DONT TOUCH VERY IMPORTANT
+
       console.log('NFT client initialized successfully:', client);
       setNftSaleClient(client);
       return true;
@@ -404,7 +434,7 @@ export function MintSection({ currentPhase, timeLeft, totalMinted, setTotalMinte
         await window.arweaveWallet.connect(['ACCESS_ADDRESS', 'SIGN_TRANSACTION']);
         console.log('Successfully connected to Arweave wallet');
         setIsConnected(true);
-        
+
         // Initialize client after wallet connection
         const clientInitialized = await initializeClient();
         return clientInitialized;
@@ -464,41 +494,41 @@ export function MintSection({ currentPhase, timeLeft, totalMinted, setTotalMinte
 
   const getPhaseStatus = () => {
     const currentTime = new Date();
-    
+
     // Phase start and end times
     const ogStartTime = new Date(Date.UTC(2025, 1, 7, 17, 0, 0));  // Feb 7th, 17:00 UTC
     const ogEndTime = new Date(Date.UTC(2025, 1, 9, 17, 0, 0));    // Feb 9th, 17:00 UTC (48 hours later)
     const fcfsEndTime = new Date(Date.UTC(2025, 1, 7, 19, 0, 0));  // Feb 7th, 19:00 UTC (2 hours after start)
-    
+
     const hasStarted = currentTime >= ogStartTime;
     const ogPhaseActive = currentTime >= ogStartTime && currentTime < ogEndTime;
     const fcfsPhaseActive = currentTime >= ogStartTime && currentTime < fcfsEndTime;
     const publicPhaseActive = currentTime >= fcfsEndTime;
-    
+
     const ogPhaseCompleted = currentTime >= ogEndTime;
     const fcfsPhaseCompleted = currentTime >= fcfsEndTime;
-    
+
     return {
       og: {
         name: 'OG Phase',
-        status: !hasStarted ? 'Starts 7th Feb 17:00 UTC' : 
-               ogPhaseCompleted ? 'Completed' :
-               'Active - Guaranteed Mint (48 Hours)',
+        status: !hasStarted ? 'Starts 7th Feb 17:00 UTC' :
+          ogPhaseCompleted ? 'Completed' :
+            'Active - Guaranteed Mint (48 Hours)',
         time: !hasStarted ? timeLeft.og :
-              ogPhaseCompleted ? '' : timeLeft.og,
+          ogPhaseCompleted ? '' : timeLeft.og,
         label: !hasStarted ? 'Time Until Start' :
-               ogPhaseCompleted ? '' : 'Time Remaining',
+          ogPhaseCompleted ? '' : 'Time Remaining',
         completed: ogPhaseCompleted
       },
       fcfs: {
         name: 'FCFS Phase',
-        status: !hasStarted ? 'Starts 7th Feb 17:00 UTC' : 
-               fcfsPhaseCompleted ? 'Completed' :
-               'Active - First Come First Served (2 Hours)',
+        status: !hasStarted ? 'Starts 7th Feb 17:00 UTC' :
+          fcfsPhaseCompleted ? 'Completed' :
+            'Active - First Come First Served (2 Hours)',
         time: !hasStarted ? timeLeft.fcfs :
-              fcfsPhaseCompleted ? '' : timeLeft.fcfs,
+          fcfsPhaseCompleted ? '' : timeLeft.fcfs,
         label: !hasStarted ? 'Time Until Start' :
-               fcfsPhaseCompleted ? '' : 'Time Remaining',
+          fcfsPhaseCompleted ? '' : 'Time Remaining',
         completed: fcfsPhaseCompleted
       },
       public: {
@@ -512,9 +542,10 @@ export function MintSection({ currentPhase, timeLeft, totalMinted, setTotalMinte
   };
 
   const isMintingEnabled = () => {
-    const currentTime = new Date();
-    const startTime = new Date(Date.UTC(2025, 1, 7, 17, 0, 0)); // Feb 7th, 17:00 UTC
-    return currentTime >= startTime;
+    // const currentTime = new Date();
+    // const startTime = new Date(Date.UTC(2025, 1, 7, 17, 0, 0)); // Feb 7th, 17:00 UTC
+    // return currentTime >= startTime;
+    return true
   };
 
   const handleQuantityChange = (increment: boolean) => {
@@ -599,7 +630,7 @@ export function MintSection({ currentPhase, timeLeft, totalMinted, setTotalMinte
             </div>
           )}
         </PhaseInfo>
-        
+
         <PhaseTimers>
           <PhaseTimer>
             <div className="phase-info">
@@ -643,18 +674,18 @@ export function MintSection({ currentPhase, timeLeft, totalMinted, setTotalMinte
             </div>
           </PhaseTimer>
         </PhaseTimers>
-        
+
         {(currentPhase === 'OG' || currentPhase === 'FCFS' || currentPhase === 'PUBLIC') && (
           <>
             <QuantitySelector>
-              <QuantityButton 
-                direction="down" 
+              <QuantityButton
+                direction="down"
                 onClick={() => handleQuantityChange(false)}
                 disabled={quantity <= 1 || isLoading || !isMintingEnabled()}
               />
               <div className="quantity">{quantity}</div>
-              <QuantityButton 
-                direction="up" 
+              <QuantityButton
+                direction="up"
                 onClick={() => handleQuantityChange(true)}
                 disabled={quantity >= getPhaseInfo(currentPhase).maxMint || isLoading || !isMintingEnabled()}
               />
@@ -672,7 +703,7 @@ export function MintSection({ currentPhase, timeLeft, totalMinted, setTotalMinte
             {isLoading ? 'Processing...' : (isConnected ? `Mint ${quantity} Now` : 'Connect & Mint')}
           </MintButton>
         </ButtonsContainer>
-        
+
         <CircleProgress>
           <CircleFill progress={(totalMinted / 3333) * 100} />
           <CircleInner>
