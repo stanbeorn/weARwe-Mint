@@ -9,18 +9,17 @@ interface WhitelistZone {
   addresses: Record<string, boolean>;
 }
 
+interface PurchaseLimit {
+  limit: number;
+  purchased: Record<string, number>;
+}
+
 interface ClientInfo {
   MasterWhitelist: [string, string, Record<string, boolean>][];
   Current_Zone: number;
+  WhitelistZones: number[];
+  PurchaseLimits: [number, Record<string, number>][];
 }
-
-// NFT Sale Client Configuration
-const NFT_SALE_CONFIG: NftSaleClientConfig = {
-  ...getNftSaleClientAutoConfiguration(),
-  processId: "ewO-sg8QM8xK_yM_ERzvbOZ4DCbTGoBK51uZnc3MENw", // Sale contract
-  purchaseAmount: "500000000000",
-  tokenProcessId: "5ZR9uegKoEhE9fJMbs-MvWLIztMNCVxgpzfeBVE3vqI" // wAR token
-};
 
 // ArConnect type declarations
 declare global {
@@ -51,16 +50,32 @@ export function MintSection({ currentPhase, timeLeft }: MintSectionProps) {
   const [nftSaleClient, setNftSaleClient] = useState<INftSaleClient | null>(null);
   const [totalMinted, setTotalMinted] = useState(0);
   
-  // Client info state TODO these will be used later
+  // Client info state
   const [masterWhitelist, setMasterWhitelist] = useState<WhitelistZone[]>([]);
   const [currentZone, setCurrentZone] = useState<number>(0);
+  const [whitelistZones, setWhitelistZones] = useState<number[]>([]);
+  const [purchaseLimits, setPurchaseLimits] = useState<PurchaseLimit[]>([]);
 
-  // Initialize client on component mount
+  // Initialize NFT client
   useEffect(() => {
     const init = async () => {
       try {
+        // Wait for window.arweaveWallet to be available
+        if (!window.arweaveWallet) {
+          console.log('Waiting for Arweave wallet...');
+          return;
+        }
+
+        // Create NFT Sale Client Configuration
+        const config: NftSaleClientConfig = {
+          ...getNftSaleClientAutoConfiguration(),
+          processId: "ewO-sg8QM8xK_yM_ERzvbOZ4DCbTGoBK51uZnc3MENw", // Sale contract
+          purchaseAmount: "500000000000",
+          tokenProcessId: "5ZR9uegKoEhE9fJMbs-MvWLIztMNCVxgpzfeBVE3vqI" // wAR token
+        };
+
         console.log('Initializing NFT client...');
-        const client = await NftSaleClient.create(NFT_SALE_CONFIG);
+        const client = await NftSaleClient.create(config);
         console.log('NFT client initialized successfully:', client);
         setNftSaleClient(client);
 
@@ -78,9 +93,17 @@ export function MintSection({ currentPhase, timeLeft }: MintSectionProps) {
           addresses
         }));
         
+        // Parse purchase limits into more usable format
+        const parsedPurchaseLimits = info.PurchaseLimits.map(([limit, purchased]) => ({
+          limit,
+          purchased: purchased || {} // Default to empty object if no purchases
+        }));
+
         // Update state with client info
         setMasterWhitelist(parsedWhitelist);
         setCurrentZone(info.Current_Zone);
+        setWhitelistZones(info.WhitelistZones);
+        setPurchaseLimits(parsedPurchaseLimits);
         
         // Update total minted
         const nftsLeft = await client.queryNFTCount();
@@ -98,6 +121,24 @@ export function MintSection({ currentPhase, timeLeft }: MintSectionProps) {
     };
 
     init();
+  }, []); // Run once on mount
+
+  // Check for wallet availability
+  useEffect(() => {
+    const checkWallet = () => {
+      if (window.arweaveWallet) {
+        console.log('Arweave wallet found');
+        setIsConnected(true);
+        clearInterval(intervalId);
+      } else {
+        console.log('Waiting for Arweave wallet...');
+      }
+    };
+
+    const intervalId = setInterval(checkWallet, 1000);
+
+    // Cleanup interval on unmount
+    return () => clearInterval(intervalId);
   }, []); // Run once on mount
 
   const connectWallet = async () => {
@@ -127,40 +168,35 @@ export function MintSection({ currentPhase, timeLeft }: MintSectionProps) {
   };
 
   const getPhaseInfo = (phase: 'OG' | 'FCFS' | 'PUBLIC' | 'NOT_STARTED') => {
-    switch (phase) {
-      case 'OG':
-        return {
-          title: 'OG Phase',
-          note: 'Guaranteed mint for OG members',
-          price: '0.5 wAR',
-          maxMint: 3,
-          showPrice: true
-        };
-      case 'FCFS':
-        return {
-          title: 'FCFS Phase',
-          note: 'First come first served',
-          price: '1 wAR',
-          maxMint: 10,
-          showPrice: true
-        };
-      case 'PUBLIC':
-        return {
-          title: 'Public Phase',
-          note: 'Open for everyone',
-          price: '1 wAR',
-          maxMint: 3333,
-          showPrice: true
-        };
-      case 'NOT_STARTED':
-        return {
-          title: 'Not Started',
-          note: 'Minting will start soon',
-          price: '',
-          maxMint: 0,
-          showPrice: false
-        };
+    // Use contract data for current zone and limits
+    const zoneIndex = currentZone - 1; // Convert to 0-based index
+    if (zoneIndex >= 0 && zoneIndex < purchaseLimits.length) {
+      const currentLimit = purchaseLimits[zoneIndex];
+      const zoneTitle = `Zone ${currentZone}`;
+      
+      // Get whitelist amount for price calculation
+      const whitelistInfo = masterWhitelist[zoneIndex];
+      const price = whitelistInfo ? 
+        `${parseInt(whitelistInfo.amount) / 1000000000} wAR` : // Convert from winston to AR
+        'N/A';
+
+      return {
+        title: zoneTitle,
+        note: `Purchase limit: ${currentLimit.limit} per wallet`,
+        price,
+        maxMint: currentLimit.limit,
+        showPrice: true
+      };
     }
+
+    // Fallback if zone data isn't available
+    return {
+      title: 'Not Started',
+      note: 'Waiting for contract data...',
+      price: '',
+      maxMint: 0,
+      showPrice: false
+    };
   };
 
   const formatDate = (date: Date) => {
@@ -174,62 +210,44 @@ export function MintSection({ currentPhase, timeLeft }: MintSectionProps) {
     }).replace(',', '') + ' UTC';
   };
 
-  // Phase timing configuration
-  const OG_PHASE_DURATION = 6 * 60 * 60 * 1000; // 6 hours in milliseconds
-  const FCFS_PHASE_DURATION = 12 * 60 * 60 * 1000; // 12 hours in milliseconds
-
-  // Base start time for all phases
-  const ogStartTime = new Date(Date.UTC(2025, 1, 9, 17, 0, 0));  // Feb 9th, 17:00 UTC
-  const fcfsStartTime = new Date(ogStartTime.getTime() + OG_PHASE_DURATION);
-  const publicStartTime = new Date(fcfsStartTime.getTime() + FCFS_PHASE_DURATION);
+  const getZoneInfo = (zoneIndex: number) => {
+    if (zoneIndex >= 0 && zoneIndex < masterWhitelist.length) {
+      const whitelistInfo = masterWhitelist[zoneIndex];
+      const purchaseLimit = purchaseLimits[zoneIndex];
+      const price = parseInt(whitelistInfo.amount) / 1000000000;
+      return {
+        price: `${price} wAR`,
+        limit: purchaseLimit.limit,
+        purchased: purchaseLimit.purchased
+      };
+    }
+    return null;
+  };
 
   const getPhaseStatus = () => {
-    const currentTime = new Date();
+    // Use contract data instead of time-based phases
+    const zones = [
+      { index: 0, name: 'Zone 1' },
+      { index: 1, name: 'Zone 2' },
+      { index: 2, name: 'Zone 3' }
+    ];
 
-    const hasStarted = currentTime >= ogStartTime;
-    const publicPhaseActive = currentTime >= publicStartTime;
+    return zones.map(zone => {
+      const info = getZoneInfo(zone.index);
+      const isActive = currentZone === zone.index + 1;
+      const isCompleted = currentZone > zone.index + 1;
 
-    const ogPhaseCompleted = currentTime >= fcfsStartTime;
-    const fcfsPhaseCompleted = currentTime >= publicStartTime;
-
-    return {
-      og: {
-        name: 'OG Phase',
-        status: !hasStarted ? `Starts ${formatDate(ogStartTime)}` :
-          ogPhaseCompleted ? 'Completed' :
-            'Active - Guaranteed Mint (6 Hours)',
-        time: !hasStarted ? timeLeft.og :
-          ogPhaseCompleted ? '' : timeLeft.og,
-        label: !hasStarted ? 'Time Until Start' :
-          ogPhaseCompleted ? '' : 'Time Remaining',
-        completed: ogPhaseCompleted
-      },
-      fcfs: {
-        name: 'FCFS Phase',
-        status: !hasStarted ? `Starts ${formatDate(fcfsStartTime)}` :
-          fcfsPhaseCompleted ? 'Completed' :
-            'Active - First Come First Served (12 Hours)',
-        time: !hasStarted ? timeLeft.fcfs :
-          fcfsPhaseCompleted ? '' : timeLeft.fcfs,
-        label: !hasStarted ? 'Time Until Start' :
-          fcfsPhaseCompleted ? '' : 'Time Remaining',
-        completed: fcfsPhaseCompleted
-      },
-      public: {
-        name: 'Public Phase',
-        status: publicPhaseActive ? 'Active - Open for Everyone' : `Starts ${formatDate(publicStartTime)}`,
-        time: !publicPhaseActive && timeLeft.public ? timeLeft.public : '',
-        label: !publicPhaseActive && timeLeft.public ? 'Time Until Start' : '',
-        completed: false
-      }
-    };
+      return {
+        name: zone.name,
+        status: isActive ? 'Active' : isCompleted ? 'Completed' : 'Waiting',
+        info: info ? `${info.price} • Max ${info.limit} per wallet` : 'Loading...',
+        completed: isCompleted
+      };
+    });
   };
 
   const isMintingEnabled = () => {
-    // const currentTime = new Date();
-    // const startTime = new Date(Date.UTC(2025, 1, 7, 17, 0, 0)); // Feb 7th, 17:00 UTC
-    // return currentTime >= startTime;
-    return true
+    return true;
   };
 
   const handleQuantityChange = (increment: boolean) => {
@@ -238,22 +256,6 @@ export function MintSection({ currentPhase, timeLeft }: MintSectionProps) {
       const newValue = increment ? prev + 1 : prev - 1;
       return Math.min(Math.max(1, newValue), maxMint);
     });
-  };
-
-  // Calculate progress for the current phase
-  const getPhaseProgress = () => {
-    if (currentPhase === 'OG' || currentPhase === 'FCFS' || currentPhase === 'PUBLIC') {
-      const phaseKey = currentPhase.toLowerCase() as 'og' | 'fcfs' | 'public';
-      const timeLeftParts = timeLeft[phaseKey].split(' ');
-      const [hours, minutes, seconds] = timeLeftParts[0].split('h')[0].split(':');
-      const totalSeconds = parseInt(hours) * 3600 + parseInt(minutes) * 60 + parseInt(seconds);
-      // Get phase duration based on current phase
-      const totalPhaseSeconds = currentPhase === 'OG' ? 6 * 3600 : // 6 hours for OG
-                               currentPhase === 'FCFS' ? 12 * 3600 : // 12 hours for FCFS
-                               24 * 3600; // 24 hours for PUBLIC
-      return `${((totalPhaseSeconds - totalSeconds) / totalPhaseSeconds) * 100}%`;
-    }
-    return '0%';
   };
 
   const handleMint = async (isLuckyDraw: boolean = false): Promise<void> => {
@@ -327,62 +329,21 @@ export function MintSection({ currentPhase, timeLeft }: MintSectionProps) {
         </div>
 
         <div className="phase-timers">
-          <div className="phase-timer">
-            <div className="phase-info">
-              <div className="phase-name">
-                {getPhaseStatus().og.name}
-                <div style={{ fontSize: '0.8rem', color: '#fff', opacity: 0.8 }}>
-                  0.5 wAR • Max 3 per wallet
+          {getPhaseStatus().map((phase, index) => (
+            <div key={index} className="phase-timer">
+              <div className="phase-info">
+                <div className="phase-name">
+                  {phase.name}
+                  <div style={{ fontSize: '0.8rem', color: '#fff', opacity: 0.8 }}>
+                    {phase.info}
+                  </div>
                 </div>
-              </div>
-              {getPhaseStatus().og.time && (
-                <div className="time">
-                  {getPhaseStatus().og.label}: {getPhaseStatus().og.time}
+                <div className={phase.completed ? 'status completed' : 'status'}>
+                  {phase.status}
                 </div>
-              )}
-              <div className={getPhaseStatus().og.completed ? 'status completed' : 'status'}>
-                {getPhaseStatus().og.status}
               </div>
             </div>
-          </div>
-
-          <div className="phase-timer">
-            <div className="phase-info">
-              <div className="phase-name">
-                {getPhaseStatus().fcfs.name}
-                <div style={{ fontSize: '0.8rem', color: '#fff', opacity: 0.8 }}>
-                  1 wAR • Max 10 per wallet
-                </div>
-              </div>
-              {getPhaseStatus().fcfs.time && (
-                <div className="time">
-                  {getPhaseStatus().fcfs.label}: {getPhaseStatus().fcfs.time}
-                </div>
-              )}
-              <div className={getPhaseStatus().fcfs.completed ? 'status completed' : 'status'}>
-                {getPhaseStatus().fcfs.status}
-              </div>
-            </div>
-          </div>
-
-          <div className="phase-timer">
-            <div className="phase-info">
-              <div className="phase-name">
-                {getPhaseStatus().public.name}
-                <div style={{ fontSize: '0.8rem', color: '#fff', opacity: 0.8 }}>
-                  1 wAR • No max limit
-                </div>
-              </div>
-              {getPhaseStatus().public.time && (
-                <div className="time">
-                  {getPhaseStatus().public.label}: {getPhaseStatus().public.time}
-                </div>
-              )}
-              <div className="status">
-                {getPhaseStatus().public.status}
-              </div>
-            </div>
-          </div>
+          ))}
         </div>
 
         {(currentPhase === 'OG' || currentPhase === 'FCFS' || currentPhase === 'PUBLIC') && (
@@ -401,13 +362,6 @@ export function MintSection({ currentPhase, timeLeft }: MintSectionProps) {
               />
               <div className="max-info">Max {getPhaseInfo(currentPhase).maxMint}</div>
             </div>
-
-            <div className="phase-progress-bar">
-              <div 
-                className="progress-fill" 
-                style={{ width: getPhaseProgress() }}
-              />
-            </div>
           </>
         )}
 
@@ -424,7 +378,14 @@ export function MintSection({ currentPhase, timeLeft }: MintSectionProps) {
               {isLoading ? 'Processing...' : (isConnected ? `Mint ${quantity} Now` : 'Connect & Mint')}
             </button>
             <div className="total-price">
-              Total: {(quantity * (currentPhase === 'OG' ? 0.5 : 1)).toFixed(2)} wAR
+              Total: {(() => {
+                const zoneIndex = currentZone - 1;
+                if (zoneIndex >= 0 && zoneIndex < masterWhitelist.length) {
+                  const price = parseInt(masterWhitelist[zoneIndex].amount) / 1000000000;
+                  return (quantity * price).toFixed(2);
+                }
+                return '0.00';
+              })()} wAR
             </div>
           </div>
           
@@ -440,7 +401,14 @@ export function MintSection({ currentPhase, timeLeft }: MintSectionProps) {
               {`${quantity}x Lucky Draw`}
             </button>
             <div className="total-price">
-              Total: {(quantity * 0.2).toFixed(2)} wAR
+              Total: {(() => {
+                const zoneIndex = currentZone - 1;
+                if (zoneIndex >= 0 && zoneIndex < masterWhitelist.length) {
+                  const price = parseInt(masterWhitelist[zoneIndex].amount) / 1000000000;
+                  return (quantity * price * 0.2).toFixed(2); // 80% discount
+                }
+                return '0.00';
+              })()} wAR
             </div>
             <div className="randao-branding">
               <span>Powered by</span>
