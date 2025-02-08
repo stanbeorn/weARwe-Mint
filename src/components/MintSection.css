@@ -111,6 +111,7 @@
   font-size: 0.8rem;
   color: #96bc73;
   font-style: italic;
+  text-align: left;
 }
 
 .phase-timer:hover {
@@ -263,7 +264,7 @@
 }
 
 .lucky-section {
-  margin-top: -6.5px;
+  margin-top: 0;
 }
 
 .full-price-text, .lucky-message {
@@ -288,6 +289,21 @@
 .lucky-section .lucky-message {
   color: #9b6dd7;
   font-style: italic;
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+.lucky-section .lucky-message .discount {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #b088e6;
+}
+
+.lucky-section .disclaimer {
+  color: rgba(155, 109, 215, 0.8);
+  font-size: 0.85rem;
+  font-style: italic;
+  margin-top: 0.5rem;
 }
 
 .mint-button, .lucky-draw-button {
@@ -295,7 +311,6 @@
   padding: 1rem 2rem;
   min-height: 56px;
   font-size: 1.2rem;
-  background: linear-gradient(45deg, #558f6d, #96bc73);
   border: none;
   border-radius: 8px;
   color: white;
@@ -305,6 +320,10 @@
   font-weight: bold;
   text-transform: uppercase;
   letter-spacing: 1px;
+}
+
+.mint-button {
+  background: linear-gradient(45deg, #558f6d, #96bc73);
 }
 
 .mint-button:hover {
@@ -325,28 +344,6 @@
   background: linear-gradient(45deg, #666, #888);
 }
 
-.lucky-draw-button {
-  background: linear-gradient(45deg, #6b4c9a, #9b6dd7);
-  font-size: 1rem;
-}
-
-.lucky-draw-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
-  background: linear-gradient(45deg, #9b6dd7, #6b4c9a);
-}
-
-.lucky-draw-button:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-}
-
-.lucky-draw-button:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-  transform: none;
-  background: linear-gradient(45deg, #666, #888);
-}
 
 .circle-progress {
   position: relative;
@@ -428,7 +425,7 @@
   display: flex;
   align-items: center;
   width: 100%;
-  background: linear-gradient(45deg, #6b4c9a, #9b6dd7);
+  background: linear-gradient(45deg, #9b6dd7, #6b4c9a);
   border-radius: 8px;
   overflow: hidden;
   margin-bottom: 0.5rem;
@@ -442,6 +439,7 @@
 .lucky-draw-container:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(45deg, #6b4c9a, #9b6dd7);
 }
 
 .lucky-draw-container:active {
@@ -451,23 +449,37 @@
 
 .lucky-draw-button {
   flex: 1;
-  background: none;
+  background: linear-gradient(45deg, #9b6dd7, #6b4c9a);
   border: none;
   color: #fff;
-  font-size: 1rem;
+  font-size: 1.2rem;
   padding: 0 0.8rem;
   cursor: pointer;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   font-weight: bold;
   height: 100%;
-  transition: background-color 0.3s ease;
+  transition: all 0.3s ease;
   white-space: nowrap;
   min-width: 110px;
 }
 
-.lucky-draw-container:hover .lucky-draw-button {
-  background: rgba(255, 255, 255, 0.1);
+.lucky-draw-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(45deg, #6b4c9a, #9b6dd7);
+}
+
+.lucky-draw-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.lucky-draw-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+  background: linear-gradient(45deg, #666, #888);
 }
 
 .randao-divider {
@@ -550,7 +562,6 @@
   }
 }
 
-
 .learn-more-container {
   display: flex;
   justify-content: flex-end;
@@ -589,9 +600,6 @@
   transition: all 0.2s ease;
 }
 
-.learn-more-link:hover img {
-}
-
 .connect-wallet-section {
   display: flex;
   flex-direction: column;
@@ -610,21 +618,6 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, 
-    transparent,
-    rgba(150, 188, 115, 0.3),
-    transparent
-  );
-}
-
-.connect-wallet-section h2 {
-  font-size: 2.5rem;
-  color: #fff;
-  text-shadow: 0 0 20px rgba(150, 188, 115, 0.3);
-  margin: 0 0 1.5rem 0;
-  text-align: center;
-  font-weight: 700;
   letter-spacing: -0.5px;
   background: linear-gradient(180deg, #ffffff, #96bc73);
   -webkit-background-clip: text;

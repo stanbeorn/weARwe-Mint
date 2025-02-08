@@ -564,7 +564,10 @@ export function MintSection({ currentPhase, timeLeft }: MintSectionProps) {
               
               <div className="lucky-section">
                 <div className="lucky-message">
-                  Try your luck! 80% discount with 20% success rate 🍀
+                  Try your luck! <span className="discount">80% discount</span> with 20% success rate 🍀
+                </div>
+                <div className="disclaimer">
+                  *Only successful draws count towards your total purchase limit
                 </div>
                 <button 
                   className="lucky-draw-button" 
