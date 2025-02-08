@@ -1,3 +1,55 @@
+.connect-wallet-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 12px;
+  margin: 2rem;
+  min-height: 300px;
+}
+
+.connect-wallet-section h2 {
+  font-size: 1.8rem;
+  margin-bottom: 1.5rem;
+  color: #333;
+}
+
+.connect-wallet-section p {
+  color: #666;
+  margin-bottom: 2rem;
+  max-width: 400px;
+  line-height: 1.5;
+}
+
+.connect-wallet-button {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 1rem 2.5rem;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.connect-wallet-button:hover {
+  background: #0056b3;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.connect-wallet-button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
 .mint-container {
   position: fixed;
   top: 20px;
@@ -70,11 +122,24 @@
   padding: 0.8rem;
   border-radius: 8px;
   border: 1px solid rgba(150, 188, 115, 0.3);
-  transition: transform 0.2s ease;
+  transition: all 0.3s ease;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 0.8rem;
+  position: relative;
+}
+
+.phase-timer.active {
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+  border-color: rgba(255, 215, 0, 0.6);
+  z-index: 1;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.phase-timer.completed {
+  opacity: 0.6;
+  background: rgba(0, 0, 0, 0.3);
 }
 
 .phase-timer:hover {
@@ -83,6 +148,7 @@
 
 .phase-timer .phase-info {
   flex: 1;
+  position: relative;
 }
 
 .phase-timer .phase-name {
@@ -93,30 +159,79 @@
   letter-spacing: 1px;
 }
 
-.phase-timer .time {
-  font-size: 1.1rem;
-  font-weight: bold;
-  color: #fff;
-  margin-bottom: 0.2rem;
+.phase-status {
+  position: absolute;
+  top: -0.4rem;
+  left: -0.4rem;
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #96bc73;
+}
+
+.phase-status.active {
+  background: rgba(255, 215, 0, 0.2);
+  color: #ffd700;
+}
+
+.phase-status.completed {
+  background: rgba(150, 188, 115, 0.2);
+}
+
+.phase-status.waiting {
+  color: #888;
 }
 
 .phase-timer .status {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+.whitelist-indicator {
+  display: flex;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(150, 188, 115, 0.3);
+  border-radius: 4px;
+  padding: 0.3rem 0.6rem;
+}
+
+.whitelist-text {
   font-size: 0.8rem;
   color: #96bc73;
-  font-style: italic;
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
+  margin-right: 0.4rem;
 }
 
-.phase-timer .completed {
+.whitelist-status {
+  font-size: 1rem;
+  width: 1.4rem;
+  height: 1.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.whitelist-status.can-purchase {
+  color: #4CAF50;
+}
+
+.whitelist-status.not-whitelisted {
+  color: #f44336;
+}
+
+.phase-timer .phase-status.completed {
   color: #96bc73;
   display: flex;
   align-items: center;
   gap: 0.4rem;
 }
 
-.phase-timer .completed::after {
+.phase-timer .phase-status.completed::after {
   content: '✓';
   font-size: 1rem;
   font-weight: bold;
