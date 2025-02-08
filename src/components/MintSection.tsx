@@ -1,6 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import styled from 'styled-components';
-import { getNftSaleClientAutoConfiguration, INftSaleClient, NftSaleClient, NftSaleClientConfig, processIds, PurchaseNftError } from 'ao-process-clients';
+import { getNftSaleClientAutoConfiguration, INftSaleClient, NftSaleClient, NftSaleClientConfig, PurchaseNftError } from 'ao-process-clients';
+import './MintSection.css';
+import { NftSaleInfo } from 'ao-process-clients/dist/src/clients/nft-sale/abstract/types';
+
+interface MintSectionProps {
+  currentPhase: 'OG' | 'FCFS' | 'PUBLIC' | 'NOT_STARTED';
+  timeLeft: {
+    og: string;
+    fcfs: string;
+    public: string;
+  };
+}
 
 // ArConnect type declarations
 declare global {
@@ -13,359 +23,6 @@ declare global {
   }
 }
 
-const Container = styled.div`
-  position: fixed;
-  top: 20px;
-  left: 50%;
-  transform: translate(-50%, 0);
-  z-index: 1000;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  pointer-events: auto;
-  background: rgba(0, 0, 0, 0.85);
-  padding: 1.2rem;
-  border-radius: 1rem;
-  backdrop-filter: blur(10px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-  width: min(90vw, 380px);
-`;
-
-const Title = styled.h1`
-  font-size: 3rem;
-  color: #fff;
-  text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-  margin: 0;
-  text-align: center;
-`;
-
-const PhaseInfo = styled.div`
-  color: #fff;
-  margin-bottom: 1rem;
-  text-align: center;
-  width: 100%;
-  
-  .current-phase {
-    font-size: 1.5rem;
-    font-weight: bold;
-    color: #96bc73;
-    margin-bottom: 0.3rem;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-  }
-
-  .price {
-    font-size: 1rem;
-    opacity: 0.9;
-  }
-
-  .phase-note {
-    font-size: 0.9rem;
-    color: #96bc73;
-    font-style: italic;
-  }
-
-  .error-message {
-    font-size: 0.9rem;
-    color: red;
-    margin-top: 10px;
-  }
-`;
-
-const PhaseTimers = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  width: 100%;
-  margin: 0.5rem 0;
-`;
-
-const PhaseTimer = styled.div`
-  background: rgba(0, 0, 0, 0.4);
-  padding: 0.8rem;
-  border-radius: 8px;
-  border: 1px solid rgba(150, 188, 115, 0.3);
-  transition: transform 0.2s ease;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.8rem;
-
-  &:hover {
-    transform: translateY(-2px);
-  }
-
-  .phase-info {
-    flex: 1;
-  }
-
-  .phase-name {
-    font-size: 0.9rem;
-    color: #96bc73;
-    margin-bottom: 0.2rem;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-  }
-
-  .time {
-    font-size: 1.1rem;
-    font-weight: bold;
-    color: #fff;
-    margin-bottom: 0.2rem;
-  }
-
-  .status {
-    font-size: 0.8rem;
-    color: #96bc73;
-    font-style: italic;
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-  }
-
-  .completed {
-    color: #96bc73;
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    
-    &::after {
-      content: '✓';
-      font-size: 1rem;
-      font-weight: bold;
-    }
-  }
-`;
-
-const CountdownTimer = styled.div`
-  color: #96bc73;
-  font-size: 1.5rem;
-  font-weight: bold;
-  margin-bottom: 1rem;
-  text-align: center;
-
-  .label {
-    font-size: 1rem;
-    color: #fff;
-    opacity: 0.8;
-    margin-bottom: 0.3rem;
-  }
-`;
-
-const PhaseProgressBar = styled.div`
-  width: 100%;
-  height: 6px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 4px;
-  margin: 0.8rem 0;
-  position: relative;
-  overflow: hidden;
-`;
-
-const ProgressFill = styled.div<{ width: number }>`
-  position: absolute;
-  top: 0;
-  left: 0;
-  height: 100%;
-  background: linear-gradient(90deg, #558f6d, #96bc73);
-  border-radius: 4px;
-  width: ${props => Math.min(Math.max(props.width, 0), 100)}%;
-  transition: width 0.3s ease;
-`;
-
-const QuantitySelector = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.8rem;
-  margin: 0.8rem 0;
-  background: rgba(0, 0, 0, 0.4);
-  padding: 0.8rem;
-  border-radius: 8px;
-  border: 1px solid rgba(150, 188, 115, 0.3);
-  width: 100%;
-  
-  .quantity {
-    font-size: 1.4rem;
-    font-weight: bold;
-    color: #fff;
-    min-width: 2rem;
-    text-align: center;
-  }
-
-  .max-info {
-    font-size: 0.9rem;
-    color: #96bc73;
-    font-style: italic;
-  }
-`;
-
-const QuantityButton = styled.button<{ direction: 'up' | 'down' }>`
-  background: rgba(150, 188, 115, 0.2);
-  border: 1px solid rgba(150, 188, 115, 0.3);
-  border-radius: 6px;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: #fff;
-  font-size: 1.1rem;
-  transition: all 0.2s;
-
-  &:hover {
-    background: rgba(150, 188, 115, 0.3);
-    transform: translateY(-2px);
-  }
-
-  &:active {
-    transform: translateY(0);
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    transform: none;
-  }
-
-  &::before {
-    content: '${props => props.direction === 'up' ? '↑' : '↓'}';
-  }
-`;
-
-const MintButton = styled.button`
-  width: 100%;
-  padding: 1rem 2rem;
-  font-size: 1.2rem;
-  background: linear-gradient(45deg, #558f6d, #96bc73);
-  border: none;
-  border-radius: 8px;
-  color: white;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-  font-weight: bold;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
-    background: linear-gradient(45deg, #96bc73, #558f6d);
-  }
-
-  &:active {
-    transform: translateY(0);
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-  }
-
-  &:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-    transform: none;
-    background: linear-gradient(45deg, #666, #888);
-  }
-`;
-
-const ButtonsContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin: 0.8rem 0;
-  width: 100%;
-`;
-
-const CircleProgress = styled.div`
-  position: relative;
-  width: 80px;
-  height: 80px;
-  margin: 0.8rem auto;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.9rem;
-  color: #fff;
-  border: 1px solid rgba(150, 188, 115, 0.3);
-`;
-
-const CircleFill = styled.div<{ progress: number }>`
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  background: conic-gradient(
-    #96bc73 ${props => props.progress}%,
-    transparent ${props => props.progress}%
-  );
-  transition: all 0.3s ease;
-`;
-
-const CircleInner = styled.div`
-  position: relative;
-  width: 90%;
-  height: 90%;
-  background: rgba(0, 0, 0, 0.4);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  text-align: center;
-  padding: 0.5rem;
-  
-  .count {
-    font-weight: bold;
-    font-size: 1.1rem;
-    color: #96bc73;
-  }
-  
-  .total {
-    font-size: 0.8rem;
-    opacity: 0.8;
-  }
-`;
-
-const LoadingOverlay = styled.div<{ show: boolean }>`
-  display: ${props => props.show ? 'flex' : 'none'};
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(253, 254, 254, 0.9);
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-`;
-
-const LoadingSpinner = styled.div`
-  border: 5px solid #f3f3f3;
-  border-top: 5px solid #558f6d;
-  border-radius: 50%;
-  width: 50px;
-  height: 50px;
-  animation: spin 1s linear infinite;
-
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-`;
-
-interface MintSectionProps {
-  currentPhase: 'OG' | 'FCFS' | 'PUBLIC' | 'NOT_STARTED';
-  timeLeft: {
-    og: string;
-    fcfs: string;
-    public: string;
-  };
-}
-
 export function MintSection({ currentPhase, timeLeft }: MintSectionProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
@@ -374,178 +31,362 @@ export function MintSection({ currentPhase, timeLeft }: MintSectionProps) {
   const [error, setError] = useState<string | null>(null);
   const [nftSaleClient, setNftSaleClient] = useState<INftSaleClient | null>(null);
   const [totalMinted, setTotalMinted] = useState(0);
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [lastUpdateTime, setLastUpdateTime] = useState<number>(0);
+  
+  // Client info state
+  const [masterWhitelist, setMasterWhitelist] = useState<[string, string, Record<string, boolean>][]>([]);
+  const [currentZone, setCurrentZone] = useState<number>(0);
+  const [whitelistZones, setWhitelistZones] = useState<number[]>([]);
+  const [purchaseLimits, setPurchaseLimits] = useState<[number, Record<string, number>][]>([]);
 
-  // Update total minted NFTs when client is initialized
-  useEffect(() => {
-    const updateTotalMinted = async () => {
-      if (nftSaleClient) {
-        try {
-          const nftsLeft = await nftSaleClient.queryNFTCount();
-          console.log(nftsLeft)
-          const TOTAL_NFTS_AVAILABLE_THIS_ROUND = 333;
-          const NFTS_SOLD_PREVIOUS_SALE = 333; // Constant for NFTs sold in previous sale
+  // Helper function to handle errors
+  const handleError = (error: unknown, isInitError: boolean = false) => {
+    console.error('Error occurred:', error);
+    // Only set UI error if it's not an initialization error
+    if (!isInitError) {
+      setError(error instanceof Error ? error.message : 'An error occurred');
+    }
+  };
 
-          const nftsSoldThisRound = Math.abs(nftsLeft - TOTAL_NFTS_AVAILABLE_THIS_ROUND);
-          console.log(nftsSoldThisRound)
-          const totalNftsSold = NFTS_SOLD_PREVIOUS_SALE + nftsSoldThisRound;
-          console.log(nftsSoldThisRound)
-          setTotalMinted(totalNftsSold);
-        } catch (error) {
-          console.error('Failed to update total minted:', error);
-        }
-      }
-    };
-
-    updateTotalMinted();
-  }, [nftSaleClient]);
-
-  const initializeClient = async () => {
+  // Function to fetch and update client info
+  const fetchClientInfo = async (client: INftSaleClient) => {
     try {
-      console.log('Initializing NFT client...');
+      const now = Date.now();
+      const response = await client.getInfo();
+      console.log('Fetched info response:', JSON.stringify(response, null, 2));
 
-      // Initialize client with auto configuration
-      // DONT TOUCH VERY IMPORTANT
-      const config: NftSaleClientConfig = getNftSaleClientAutoConfiguration()
-      config.processId = "y__FX6IgcXDOlOIEZqWZDU1k1dxYSpBICf-wxv25Tj0" // TODO swap to final sale contract
-      config.purchaseAmount = "500000000000"
-      config.tokenProcessId = "5ZR9uegKoEhE9fJMbs-MvWLIztMNCVxgpzfeBVE3vqI" //processIds.WRAPPED_AR_TOKEN_PROCESS_ID //TODO wAR
-      const client = await NftSaleClient.create(config);
-      await client.queryNFTCount()
-      // DONT TOUCH VERY IMPORTANT
+      // Parse and validate the response
+      const info = response as any;
+      
+      // Log the raw data structure
+      console.log('Response structure:', {
+        hasCurrentZone: 'Current_Zone' in info,
+        currentZoneType: typeof info.Current_Zone,
+        hasMasterWhitelist: 'MasterWhitelist' in info,
+        masterWhitelistType: Array.isArray(info.MasterWhitelist) ? 'array' : typeof info.MasterWhitelist,
+        hasWhitelistZones: 'WhitelistZones' in info,
+        whitelistZonesType: Array.isArray(info.WhitelistZones) ? 'array' : typeof info.WhitelistZones,
+        hasPurchaseLimits: 'PurchaseLimits' in info,
+        purchaseLimitsType: Array.isArray(info.PurchaseLimits) ? 'array' : typeof info.PurchaseLimits
+      });
+      
+      // Validate and extract data with fallbacks
+      const currentZone = typeof info.Current_Zone === 'number' ? info.Current_Zone : 1;
+      const whitelistZones = Array.isArray(info.WhitelistZones) ? info.WhitelistZones : [];
+      const masterWhitelist = Array.isArray(info.MasterWhitelist) ? info.MasterWhitelist : [];
+      const purchaseLimits = Array.isArray(info.PurchaseLimits) ? info.PurchaseLimits : [];
+      
+      console.log('Extracted data:', {
+        currentZone,
+        whitelistZones,
+        masterWhitelist,
+        purchaseLimits
+      });
 
-      console.log('NFT client initialized successfully:', client);
-      setNftSaleClient(client);
+      // Transform purchase limits with additional validation
+      const parsedPurchaseLimits: [number, Record<string, number>][] = purchaseLimits.map((item: any) => {
+        // Ensure item is an array with at least 2 elements
+        if (!Array.isArray(item) || item.length < 2) {
+          console.warn('Invalid purchase limit item:', item);
+          return [0, {}] as [number, Record<string, number>];
+        }
+        
+        const [limit, purchased] = item;
+        const purchasedRecord: Record<string, number> = {};
+        if (Array.isArray(purchased)) {
+          purchased.forEach((item, index) => {
+            if (typeof item === 'object' && item !== null) {
+              Object.entries(item).forEach(([key, value]) => {
+                if (typeof value === 'number') {
+                  purchasedRecord[key] = value;
+                }
+              });
+            }
+          });
+        } else if (typeof purchased === 'object' && purchased !== null) {
+          Object.entries(purchased).forEach(([key, value]) => {
+            if (typeof value === 'number') {
+              purchasedRecord[key] = value;
+            }
+          });
+        }
+        return [limit, purchasedRecord] as [number, Record<string, number>];
+      });
+
+      // Update state with validated data
+      console.log('Updating state with validated data:', {
+        currentZone,
+        whitelistZones,
+        masterWhitelist,
+        purchaseLimits: parsedPurchaseLimits
+      });
+
+      setMasterWhitelist(masterWhitelist);
+      setCurrentZone(currentZone);
+      setWhitelistZones(whitelistZones);
+      setPurchaseLimits(parsedPurchaseLimits);
+      setLastUpdateTime(now);
+
+      // Update total minted
+      const nftsLeft = await client.queryNFTCount();
+      const TOTAL_NFTS_AVAILABLE = 3333;
+      const nftsSold = Math.abs(nftsLeft - TOTAL_NFTS_AVAILABLE);
+      setTotalMinted(nftsSold);
+
       return true;
     } catch (error) {
-      console.error('Failed to initialize NFT client. Detailed error:', error);
-      if (error instanceof Error) {
-        setError(`Failed to initialize NFT client: ${error.message}`);
-      } else {
-        setError('Failed to initialize NFT client: Unknown error');
-      }
+      console.error('Failed to fetch client info:', error);
+      handleError(error, true); // Pass true to indicate this is an initialization error
       return false;
     }
   };
+
+  // Initialize NFT client and set up polling after wallet connection
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+    let consecutiveFailures = 0;
+    const MAX_FAILURES = 3;
+    const BASE_INTERVAL = 10000;
+    const MAX_INTERVAL = 30000;
+    
+    const init = async () => {
+      if (!isConnected || !walletAddress) {
+        return;
+      }
+
+      try {
+        // Create NFT Sale Client Configuration
+        const config: NftSaleClientConfig = {
+          ...getNftSaleClientAutoConfiguration(),
+          processId: "ewO-sg8QM8xK_yM_ERzvbOZ4DCbTGoBK51uZnc3MENw",
+          tokenProcessId: "hqkQC3X-UfFeHRNc83OYORbsB_9v6uW0A-hDRVTH1mU"
+        };
+
+        console.log('Initializing NFT client...');
+        const client = await NftSaleClient.create(config);
+        console.log('NFT client initialized successfully');
+        setNftSaleClient(client);
+
+        // Initial fetch of client info
+        const success = await fetchClientInfo(client);
+        if (!success) {
+          console.error('Failed initial data fetch');
+          return;
+        }
+
+        // Set up polling for updates with error recovery
+        intervalId = setInterval(async () => {
+          console.log('Polling for updates...');
+          const success = await fetchClientInfo(client);
+          
+          if (success) {
+            consecutiveFailures = 0;
+            // Reset interval if it was increased
+            if (intervalId) {
+              clearInterval(intervalId);
+              intervalId = setInterval(async () => {
+                const success = await fetchClientInfo(client);
+                if (!success) consecutiveFailures++;
+                else consecutiveFailures = 0;
+              }, BASE_INTERVAL);
+            }
+          } else {
+            consecutiveFailures++;
+            console.error(`Failed to fetch updates (${consecutiveFailures}/${MAX_FAILURES} failures)`);
+            
+            // If too many failures, increase polling interval
+            if (consecutiveFailures >= MAX_FAILURES) {
+              if (intervalId) {
+                clearInterval(intervalId);
+                intervalId = setInterval(async () => {
+                  const success = await fetchClientInfo(client);
+                  if (success) {
+                    consecutiveFailures = 0;
+                    // Reset to normal interval
+                    if (intervalId) {
+                      clearInterval(intervalId);
+                      intervalId = setInterval(() => fetchClientInfo(client), BASE_INTERVAL);
+                    }
+                  }
+                }, MAX_INTERVAL);
+              }
+            }
+          }
+        }, BASE_INTERVAL);
+      } catch (error) {
+        console.error('Failed to initialize client:', error);
+        handleError(error, true); // Pass true to indicate this is an initialization error
+        console.error('NFT client initialization error:', error instanceof Error ? error.message : 'Unknown error');
+      }
+    };
+
+    init();
+
+    // Cleanup function to clear interval
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [isConnected, walletAddress]); // Run when wallet connection changes
 
   const connectWallet = async () => {
     try {
       if (window.arweaveWallet) {
         console.log('Connecting to Arweave wallet...');
         await window.arweaveWallet.connect(['ACCESS_ADDRESS', 'SIGN_TRANSACTION']);
+        const address = await window.arweaveWallet.getActiveAddress();
         console.log('Successfully connected to Arweave wallet');
+        console.log('Wallet address:', address);
         setIsConnected(true);
+        setWalletAddress(address);
+        setError(null); // Clear any previous errors
 
-        // Initialize client after wallet connection
-        const clientInitialized = await initializeClient();
-        return clientInitialized;
+        // Refresh data after wallet connection
+        if (nftSaleClient) {
+          await fetchClientInfo(nftSaleClient);
+        }
+
+        return true;
       } else {
         const error = 'Arweave wallet not found. Please install Arweave wallet extension.';
         console.error(error);
-        setError(error);
+        setError(error); // Show this error as it's a user-actionable error
         return false;
       }
     } catch (error) {
       console.error('Failed to connect wallet. Detailed error:', error);
-      if (error instanceof Error) {
-        setError(`Failed to connect wallet: ${error.message}`);
+      // Only show user-facing wallet connection errors
+      if (error instanceof Error && error.message.includes('User rejected')) {
+        setError('Wallet connection was rejected. Please try again.');
+      } else if (!window.arweaveWallet) {
+        setError('Arweave wallet not found. Please install Arweave wallet extension.');
       } else {
-        setError('Failed to connect wallet: Unknown error');
+        // Don't show technical errors to the user
+        console.error('Wallet connection error:', error);
       }
       return false;
     }
   };
 
   const getPhaseInfo = (phase: 'OG' | 'FCFS' | 'PUBLIC' | 'NOT_STARTED') => {
-    switch (phase) {
-      case 'OG':
-        return {
-          title: 'OG Phase',
-          note: 'Guaranteed mint for OG members',
-          price: '0.5 wAR',
-          maxMint: 3,
-          showPrice: true
-        };
-      case 'FCFS':
-        return {
-          title: 'FCFS Phase',
-          note: 'First come first served',
-          price: '1 wAR',
-          maxMint: 3,
-          showPrice: true
-        };
-      case 'PUBLIC':
-        return {
-          title: 'Public Phase',
-          note: 'Open for everyone',
-          price: '1 wAR',
-          maxMint: 3,
-          showPrice: true
-        };
-      case 'NOT_STARTED':
-        return {
-          title: 'Not Started',
-          note: 'Minting will start soon',
-          price: '',
-          maxMint: 3,
-          showPrice: false
-        };
+    // Use contract data for current zone and limits
+    const zoneIndex = currentZone - 1; // Convert to 0-based index
+    if (zoneIndex >= 0 && zoneIndex < purchaseLimits.length) {
+      const [limit, purchased] = purchaseLimits[zoneIndex] || [0, {}];
+      const zoneTitle = `Zone ${currentZone}`;
+      
+      // Get whitelist amount for price calculation
+      const [amount, , ] = masterWhitelist[zoneIndex] || ['0', '0', {}];
+      const price = amount ? 
+        `${parseInt(amount) / 1000000000000} wAR` : // Convert from winston to AR
+        'N/A';
+
+      return {
+        title: zoneTitle,
+        note: `Purchase limit: ${limit} per wallet`,
+        price,
+        maxMint: limit,
+        showPrice: true
+      };
     }
-  };
 
-  const getPhaseStatus = () => {
-    const currentTime = new Date();
-
-    // Phase start and end times
-    const ogStartTime = new Date(Date.UTC(2025, 1, 7, 17, 0, 0));  // Feb 7th, 17:00 UTC
-    const ogEndTime = new Date(Date.UTC(2025, 1, 9, 17, 0, 0));    // Feb 9th, 17:00 UTC (48 hours later)
-    const fcfsEndTime = new Date(Date.UTC(2025, 1, 7, 19, 0, 0));  // Feb 7th, 19:00 UTC (2 hours after start)
-
-    const hasStarted = currentTime >= ogStartTime;
-    const ogPhaseActive = currentTime >= ogStartTime && currentTime < ogEndTime;
-    const fcfsPhaseActive = currentTime >= ogStartTime && currentTime < fcfsEndTime;
-    const publicPhaseActive = currentTime >= fcfsEndTime;
-
-    const ogPhaseCompleted = currentTime >= ogEndTime;
-    const fcfsPhaseCompleted = currentTime >= fcfsEndTime;
-
+    // Fallback if zone data isn't available
     return {
-      og: {
-        name: 'OG Phase',
-        status: !hasStarted ? 'Starts 7th Feb 17:00 UTC' :
-          ogPhaseCompleted ? 'Completed' :
-            'Active - Guaranteed Mint (48 Hours)',
-        time: !hasStarted ? timeLeft.og :
-          ogPhaseCompleted ? '' : timeLeft.og,
-        label: !hasStarted ? 'Time Until Start' :
-          ogPhaseCompleted ? '' : 'Time Remaining',
-        completed: ogPhaseCompleted
-      },
-      fcfs: {
-        name: 'FCFS Phase',
-        status: !hasStarted ? 'Starts 7th Feb 17:00 UTC' :
-          fcfsPhaseCompleted ? 'Completed' :
-            'Active - First Come First Served (2 Hours)',
-        time: !hasStarted ? timeLeft.fcfs :
-          fcfsPhaseCompleted ? '' : timeLeft.fcfs,
-        label: !hasStarted ? 'Time Until Start' :
-          fcfsPhaseCompleted ? '' : 'Time Remaining',
-        completed: fcfsPhaseCompleted
-      },
-      public: {
-        name: 'Public Phase',
-        status: publicPhaseActive ? 'Active - Open for Everyone (1 Week)' : 'Starts 7th Feb 19:00 UTC',
-        time: !publicPhaseActive && timeLeft.public ? timeLeft.public : '',
-        label: !publicPhaseActive && timeLeft.public ? 'Time Until Start' : '',
-        completed: false
-      }
+      title: 'Not Started',
+      note: 'Waiting for contract data...',
+      price: '',
+      maxMint: 0,
+      showPrice: false
     };
   };
 
+  const getZoneInfo = (zoneIndex: number) => {
+    if (zoneIndex >= 0 && zoneIndex < masterWhitelist.length) {
+      const [amount, , addresses] = masterWhitelist[zoneIndex] || ['0', '0', {}];
+      const [limit, purchased] = purchaseLimits[zoneIndex] || [0, {}];
+      const priceInWinston = BigInt(amount);
+      const price = Number(priceInWinston) / 1000000000000;
+      
+      // Check if user is whitelisted for this zone
+      const isWhitelisted = zoneIndex === 2 || // Zone 3 is open to all
+        (walletAddress && addresses[walletAddress]);
+      
+      // Check if user has reached purchase limit
+      const userPurchases = walletAddress ? (purchased as Record<string, number>)[walletAddress] || 0 : 0;
+      const canPurchase = isWhitelisted && (walletAddress ? (!(purchased as Record<string, number>)[walletAddress] || userPurchases < limit) : false);
+      
+      return {
+        price: price.toFixed(2),
+        limit,
+        purchased,
+        isWhitelisted,
+        canPurchase,
+        userPurchases
+      };
+    }
+    return null;
+  };
+
+  const getPhaseStatus = () => {
+    // Use contract data instead of time-based phases
+    const zones = [
+      { index: 0, name: 'Zone 1' },
+      { index: 1, name: 'Zone 2' },
+      { index: 2, name: 'Zone 3' }
+    ];
+
+    console.log('Getting phase status with:', {
+      currentZone,
+      masterWhitelistLength: masterWhitelist.length,
+      purchaseLimitsLength: purchaseLimits.length,
+      lastUpdateTime: new Date(lastUpdateTime).toISOString()
+    });
+
+    return zones.map(zone => {
+      const info = getZoneInfo(zone.index);
+      const isActive = currentZone === zone.index + 1;
+      const isCompleted = currentZone > zone.index + 1;
+
+      const status = {
+        name: zone.name,
+        status: isActive ? 'Active' : isCompleted ? 'Completed' : 'Waiting',
+        info: info ? `${info.price} wAR • Max ${info.limit} per wallet` : 'Loading...',
+        completed: isCompleted
+      };
+
+      console.log(`Zone ${zone.index + 1} status:`, {
+        ...status,
+        isActive,
+        isCompleted,
+        hasInfo: !!info,
+        zoneInfo: info
+      });
+
+      return status;
+    });
+  };
+
   const isMintingEnabled = () => {
-    // const currentTime = new Date();
-    // const startTime = new Date(Date.UTC(2025, 1, 7, 17, 0, 0)); // Feb 7th, 17:00 UTC
-    // return currentTime >= startTime;
-    return true
+    // Check if we have valid zone data
+    const hasValidZoneData = currentZone > 0 && 
+                            masterWhitelist.length > 0 && 
+                            purchaseLimits.length > 0;
+    
+    // Check if data is stale (over 1 minute old)
+    const isDataFresh = Date.now() - lastUpdateTime < 60000;
+    
+    // console.log('Minting enabled check:', {
+    //   currentZone,
+    //   hasValidZoneData,
+    //   isDataFresh,
+    //   lastUpdateTime: new Date(lastUpdateTime).toISOString(),
+    //   masterWhitelistLength: masterWhitelist.length,
+    //   purchaseLimitsLength: purchaseLimits.length
+    // });
+    
+    return hasValidZoneData && isDataFresh;
   };
 
   const handleQuantityChange = (increment: boolean) => {
@@ -556,21 +397,7 @@ export function MintSection({ currentPhase, timeLeft }: MintSectionProps) {
     });
   };
 
-  // Calculate progress for the current phase
-  const getPhaseProgress = () => {
-    if (currentPhase === 'OG' || currentPhase === 'FCFS' || currentPhase === 'PUBLIC') {
-      const phaseKey = currentPhase.toLowerCase() as 'og' | 'fcfs' | 'public';
-      const timeLeftParts = timeLeft[phaseKey].split(' ');
-      const [hours, minutes, seconds] = timeLeftParts[0].split('h')[0].split(':');
-      const totalSeconds = parseInt(hours) * 3600 + parseInt(minutes) * 60 + parseInt(seconds);
-      // Phase duration is 2 hours (7200 seconds)
-      const totalPhaseSeconds = 2 * 3600;
-      return `${((totalPhaseSeconds - totalSeconds) / totalPhaseSeconds) * 100}%`;
-    }
-    return '0%';
-  };
-
-  const handleMint = async (): Promise<void> => {
+  const handleMint = async (isLuckyDraw: boolean = false): Promise<void> => {
     try {
       setIsLoading(true);
       setError(null);
@@ -590,21 +417,37 @@ export function MintSection({ currentPhase, timeLeft }: MintSectionProps) {
       // Purchase NFTs based on quantity
       for (let i = 0; i < quantity; i++) {
         try {
-          const success = await nftSaleClient.purchaseNft();
+          let success;
+          if (isLuckyDraw) {
+            success = await nftSaleClient.luckyDraw();
+          } else {
+            success = await nftSaleClient.purchaseNft();
+          }
+          
           if (!success) {
-            throw new Error('Purchase failed');
+            throw new Error(isLuckyDraw ? 'Lucky draw failed' : 'Purchase failed');
           }
         } catch (error) {
           if (error instanceof PurchaseNftError) {
-            throw new Error(`Purchase failed: ${error.message}`);
+            throw new Error(`${isLuckyDraw ? 'Lucky draw' : 'Purchase'} failed: ${error.message}`);
           }
           throw error;
         }
       }
 
-      setTotalMinted(prevTotal => prevTotal + quantity);
+      // After successful mint, update all data
+      console.log('Refreshing data after successful mint...');
+      await fetchClientInfo(nftSaleClient);
+      
       setShowSuccess(true);
-      setTimeout(() => setShowSuccess(false), 3000);
+      setTimeout(() => {
+        setShowSuccess(false);
+        // Refresh data again after success message disappears
+        if (nftSaleClient) {
+          console.log('Refreshing data after success message...');
+          fetchClientInfo(nftSaleClient);
+        }
+      }, 3000);
     } catch (error) {
       console.error('Minting failed:', error);
       setError(error instanceof Error ? error.message : 'Failed to mint NFT');
@@ -613,113 +456,165 @@ export function MintSection({ currentPhase, timeLeft }: MintSectionProps) {
     }
   };
 
+  const renderWhitelistStatus = (zoneInfo: ReturnType<typeof getZoneInfo>) => {
+    if (!zoneInfo || !walletAddress) return null;
+    return (
+      <div className="whitelist-indicator">
+        <span className="whitelist-text">Whitelisted</span>
+        <span 
+          className={`whitelist-status ${zoneInfo.isWhitelisted ? 'can-purchase' : 'not-whitelisted'}`}
+          title={zoneInfo.isWhitelisted ? 'You can mint in this zone' : 'Not whitelisted for this zone'}
+        >
+          {zoneInfo.isWhitelisted ? '✅' : '❌'}
+        </span>
+      </div>
+    );
+  };
+
   return (
     <>
-      <Container>
-        <PhaseInfo>
-          <div className="current-phase">{getPhaseInfo(currentPhase).title}</div>
-          {getPhaseInfo(currentPhase).showPrice && (
-            <div className="price">Price: {getPhaseInfo(currentPhase).price}</div>
-          )}
-          {getPhaseInfo(currentPhase).note && (
-            <div className="phase-note">{getPhaseInfo(currentPhase).note}</div>
-          )}
-          {error && (
-            <div className="error-message" style={{ color: 'red', marginTop: '10px' }}>
-              {error}
-            </div>
-          )}
-        </PhaseInfo>
-
-        <PhaseTimers>
-          <PhaseTimer>
-            <div className="phase-info">
-              <div className="phase-name">{getPhaseStatus().og.name}</div>
-              {getPhaseStatus().og.time && (
-                <div className="time">
-                  {getPhaseStatus().og.label}: {getPhaseStatus().og.time}
-                </div>
-              )}
-              <div className={getPhaseStatus().og.completed ? 'status completed' : 'status'}>
-                {getPhaseStatus().og.status}
-              </div>
-            </div>
-          </PhaseTimer>
-
-          <PhaseTimer>
-            <div className="phase-info">
-              <div className="phase-name">{getPhaseStatus().fcfs.name}</div>
-              {getPhaseStatus().fcfs.time && (
-                <div className="time">
-                  {getPhaseStatus().fcfs.label}: {getPhaseStatus().fcfs.time}
-                </div>
-              )}
-              <div className={getPhaseStatus().fcfs.completed ? 'status completed' : 'status'}>
-                {getPhaseStatus().fcfs.status}
-              </div>
-            </div>
-          </PhaseTimer>
-
-          <PhaseTimer>
-            <div className="phase-info">
-              <div className="phase-name">{getPhaseStatus().public.name}</div>
-              {getPhaseStatus().public.time && (
-                <div className="time">
-                  {getPhaseStatus().public.label}: {getPhaseStatus().public.time}
-                </div>
-              )}
-              <div className="status">
-                {getPhaseStatus().public.status}
-              </div>
-            </div>
-          </PhaseTimer>
-        </PhaseTimers>
-
-        {(currentPhase === 'OG' || currentPhase === 'FCFS' || currentPhase === 'PUBLIC') && (
+      <div className="mint-container">
+        {!isConnected ? (
+          <div className="connect-wallet-section">
+            <h2>Connect Your Wallet</h2>
+            <p>Please connect your Arweave wallet to view minting information and participate in the sale.</p>
+            <button 
+              className="connect-wallet-button"
+              onClick={connectWallet}
+              disabled={isLoading}
+            >
+              {isLoading ? 'Connecting...' : 'Connect Wallet'}
+            </button>
+            {error && (
+              <div className="error-message">{error}</div>
+            )}
+          </div>
+        ) : (
           <>
-            <QuantitySelector>
-              <QuantityButton
-                direction="down"
-                onClick={() => handleQuantityChange(false)}
-                disabled={quantity <= 1 || isLoading || !isMintingEnabled()}
-              />
-              <div className="quantity">{quantity}</div>
-              <QuantityButton
-                direction="up"
-                onClick={() => handleQuantityChange(true)}
-                disabled={quantity >= getPhaseInfo(currentPhase).maxMint || isLoading || !isMintingEnabled()}
-              />
-              <div className="max-info">Max {getPhaseInfo(currentPhase).maxMint}</div>
-            </QuantitySelector>
 
-            <PhaseProgressBar>
-              <ProgressFill width={parseFloat(getPhaseProgress())} />
-            </PhaseProgressBar>
+            <div className="phase-info">
+              <div className="current-phase">{getPhaseInfo(currentPhase).title}</div>
+              {getPhaseInfo(currentPhase).showPrice && (
+                <div className="price">Price: {getPhaseInfo(currentPhase).price}</div>
+              )}
+              {getPhaseInfo(currentPhase).note && (
+                <div className="phase-note">{getPhaseInfo(currentPhase).note}</div>
+              )}
+              {error && (
+                <div className="error-message">{error}</div>
+              )}
+            </div>
+
+            <div className="phase-timers">
+              {getPhaseStatus().map((phase, index) => {
+                const isActive = currentZone === index + 1;
+                const zoneInfo = getZoneInfo(index);
+                return (
+                  <div 
+                    key={index} 
+                    className={`phase-timer ${isActive ? 'active' : ''} ${phase.completed ? 'completed' : ''}`}
+                  >
+                    <div className="phase-info">
+                      <div className="phase-name">
+                        {phase.name}
+                        <div className="phase-info-details">{phase.info}</div>
+                      </div>
+                      <div className={`phase-status ${phase.status.toLowerCase()}`}>
+                        {phase.status}
+                      </div>
+                      <div className={`status ${phase.completed ? 'completed' : ''} ${isActive ? 'active' : ''}`}>
+                        {renderWhitelistStatus(zoneInfo)}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {(currentPhase === 'OG' || currentPhase === 'FCFS' || currentPhase === 'PUBLIC') && (
+              <div className="quantity-selector">
+                <button
+                  className="quantity-button down"
+                  onClick={() => handleQuantityChange(false)}
+                  disabled={quantity <= 1 || isLoading || !isMintingEnabled()}
+                />
+                <div className="quantity">{quantity}</div>
+                <button
+                  className="quantity-button up"
+                  onClick={() => handleQuantityChange(true)}
+                  disabled={quantity >= getPhaseInfo(currentPhase).maxMint || isLoading || !isMintingEnabled()}
+                />
+                <div className="max-info">Max {getPhaseInfo(currentPhase).maxMint}</div>
+              </div>
+            )}
+
+            <div className="buttons-container">
+              <div className="mint-section">
+                <div className="full-price-text">
+                  Pay Full Price - Guaranteed Mint
+                </div>
+                <button 
+                  className="mint-button" 
+                  onClick={() => handleMint(false)} 
+                  disabled={isLoading || !isMintingEnabled()}
+                >
+                  {isLoading ? 'Processing...' : `Mint ${quantity} Now`}
+                </button>
+              </div>
+              
+              <div className="lucky-section">
+                <button 
+                  className="lucky-draw-button" 
+                  onClick={() => handleMint(true)} 
+                  disabled={isLoading || !isMintingEnabled()}
+                >
+                  {`${quantity}x Lucky Draw`}
+                </button>
+                <div className="lucky-message">
+                  Try your luck! <span className="discount">80% discount</span> with 20% success rate 🍀
+                </div>
+                <div className="disclaimer">
+                  *Only successful draws count towards your total purchase limit
+                </div>
+                <div className="randao-branding">
+                  <span>Powered by</span>
+                  <img src="/randao.png" alt="RANDAO" />
+                  <a 
+                    href="https://randao.ar.io" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="learn-more-link"
+                  >
+                    Learn More
+                    <img src="/rng-logo.svg" alt="RNG" />
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <div className="circle-progress">
+              <div 
+                className="circle-fill" 
+                style={{ 
+                  background: `conic-gradient(#96bc73 ${(totalMinted / 3333) * 100}%, transparent ${(totalMinted / 3333) * 100}%)` 
+                }} 
+              />
+              <div className="circle-inner">
+                <div className="count">{totalMinted}</div>
+                <div className="total">/ 3333</div>
+              </div>
+            </div>
           </>
         )}
+      </div>
 
-        <ButtonsContainer>
-          <MintButton onClick={handleMint} disabled={isLoading || !isMintingEnabled()}>
-            {isLoading ? 'Processing...' : (isConnected ? `Mint ${quantity} Now` : 'Connect & Mint')}
-          </MintButton>
-        </ButtonsContainer>
-
-        <CircleProgress>
-          <CircleFill progress={(totalMinted / 3333) * 100} />
-          <CircleInner>
-            <div className="count">{totalMinted}</div>
-            <div className="total">/ 3333</div>
-          </CircleInner>
-        </CircleProgress>
-      </Container>
-
-      <LoadingOverlay show={isLoading || showSuccess}>
+      <div className="loading-overlay" style={{ display: (isLoading || showSuccess) ? 'flex' : 'none' }}>
         {isLoading ? (
-          <LoadingSpinner />
+          <div className="loading-spinner" />
         ) : (
-          showSuccess && <h2 style={{ color: '#558f6d' }}>Successfully Minted!</h2>
+          showSuccess && <h2 className="success-message">Successfully Minted!</h2>
         )}
-      </LoadingOverlay>
+      </div>
     </>
   );
 }
