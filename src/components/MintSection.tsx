@@ -1,7 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { getNftSaleClientAutoConfiguration, INftSaleClient, NftSaleClient, NftSaleClientConfig, PurchaseNftError } from 'ao-process-clients';
-
 import './MintSection.css';
+
+// Types for client info response
+interface WhitelistZone {
+  amount: string;
+  discount: string;
+  addresses: Record<string, boolean>;
+}
+
+interface ClientInfo {
+  MasterWhitelist: [string, string, Record<string, boolean>][];
+  Current_Zone: number;
+}
 
 // NFT Sale Client Configuration
 const NFT_SALE_CONFIG: NftSaleClientConfig = {
@@ -39,6 +50,10 @@ export function MintSection({ currentPhase, timeLeft }: MintSectionProps) {
   const [error, setError] = useState<string | null>(null);
   const [nftSaleClient, setNftSaleClient] = useState<INftSaleClient | null>(null);
   const [totalMinted, setTotalMinted] = useState(0);
+  
+  // Client info state TODO these will be used later
+  const [masterWhitelist, setMasterWhitelist] = useState<WhitelistZone[]>([]);
+  const [currentZone, setCurrentZone] = useState<number>(0);
 
   // Initialize client on component mount
   useEffect(() => {
@@ -49,9 +64,23 @@ export function MintSection({ currentPhase, timeLeft }: MintSectionProps) {
         console.log('NFT client initialized successfully:', client);
         setNftSaleClient(client);
 
-        // Get client info
-        const info = await client.getInfo();
-        console.log('NFT Sale Client Info:', info);
+        // Get client info and parse JSON
+        const infoResponse = await client.getInfo();
+        console.log('NFT Sale Client Info:', infoResponse);
+        
+        // Parse the JSON string from the array
+        const info = JSON.parse(infoResponse[0]) as ClientInfo;
+        
+        // Parse whitelist data into more usable format
+        const parsedWhitelist = info.MasterWhitelist.map(([amount, discount, addresses]) => ({
+          amount,
+          discount,
+          addresses
+        }));
+        
+        // Update state with client info
+        setMasterWhitelist(parsedWhitelist);
+        setCurrentZone(info.Current_Zone);
         
         // Update total minted
         const nftsLeft = await client.queryNFTCount();
