@@ -1,0 +1,445 @@
+.mint-container {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translate(-50%, 0);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: auto;
+  background: rgba(0, 0, 0, 0.85);
+  padding: 1.2rem;
+  border-radius: 1rem;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  width: min(90vw, 800px);
+}
+
+.mint-title {
+  font-size: 3rem;
+  color: #fff;
+  text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  margin: 0;
+  text-align: center;
+}
+
+.phase-info {
+  color: #fff;
+  margin-bottom: 1rem;
+  text-align: center;
+  width: 100%;
+}
+
+.phase-info .current-phase {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #96bc73;
+  margin-bottom: 0.3rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.phase-info .price {
+  font-size: 1rem;
+  opacity: 0.9;
+}
+
+.phase-info .phase-note {
+  font-size: 0.9rem;
+  color: #96bc73;
+  font-style: italic;
+}
+
+.phase-info .error-message {
+  font-size: 0.9rem;
+  color: red;
+  margin-top: 10px;
+}
+
+.phase-timers {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+  margin: 0.5rem 0;
+}
+
+.phase-timer {
+  background: rgba(0, 0, 0, 0.4);
+  padding: 0.8rem;
+  border-radius: 8px;
+  border: 1px solid rgba(150, 188, 115, 0.3);
+  transition: transform 0.2s ease;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.phase-timer:hover {
+  transform: translateY(-2px);
+}
+
+.phase-timer .phase-info {
+  flex: 1;
+}
+
+.phase-timer .phase-name {
+  font-size: 0.9rem;
+  color: #96bc73;
+  margin-bottom: 0.2rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.phase-timer .time {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #fff;
+  margin-bottom: 0.2rem;
+}
+
+.phase-timer .status {
+  font-size: 0.8rem;
+  color: #96bc73;
+  font-style: italic;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.phase-timer .completed {
+  color: #96bc73;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.phase-timer .completed::after {
+  content: '✓';
+  font-size: 1rem;
+  font-weight: bold;
+}
+
+.countdown-timer {
+  color: #96bc73;
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.countdown-timer .label {
+  font-size: 1rem;
+  color: #fff;
+  opacity: 0.8;
+  margin-bottom: 0.3rem;
+}
+
+.phase-progress-bar {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  margin: 0.8rem 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.progress-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: linear-gradient(90deg, #558f6d, #96bc73);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.quantity-selector {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  margin: 0.8rem 0;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 0.8rem;
+  border-radius: 8px;
+  border: 1px solid rgba(150, 188, 115, 0.3);
+  width: 100%;
+}
+
+.quantity-selector .quantity {
+  font-size: 1.4rem;
+  font-weight: bold;
+  color: #fff;
+  min-width: 2rem;
+  text-align: center;
+}
+
+.quantity-selector .max-info {
+  font-size: 0.9rem;
+  color: #96bc73;
+  font-style: italic;
+}
+
+.quantity-button {
+  background: rgba(150, 188, 115, 0.2);
+  border: 1px solid rgba(150, 188, 115, 0.3);
+  border-radius: 6px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #fff;
+  font-size: 1.1rem;
+  transition: all 0.2s;
+}
+
+.quantity-button:hover {
+  background: rgba(150, 188, 115, 0.3);
+  transform: translateY(-2px);
+}
+
+.quantity-button:active {
+  transform: translateY(0);
+}
+
+.quantity-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.quantity-button.up::before {
+  content: '↑';
+}
+
+.quantity-button.down::before {
+  content: '↓';
+}
+
+.buttons-container {
+  display: flex;
+  gap: 1.2rem;
+  align-items: flex-start;
+  margin: 0.8rem 0;
+  width: 100%;
+}
+
+.mint-section, .lucky-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-height: 140px;
+}
+
+.mint-section .full-price-text, .lucky-section .lucky-message {
+  font-size: 0.9rem;
+  text-align: center;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+}
+
+.mint-section .full-price-text {
+  color: #96bc73;
+  font-weight: 500;
+}
+
+.lucky-section .lucky-message {
+  color: #9b6dd7;
+  font-style: italic;
+}
+
+.total-price {
+  font-size: 0.9rem;
+  color: #fff;
+  opacity: 0.8;
+  text-align: center;
+  min-height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mint-button, .lucky-draw-button {
+  width: 100%;
+  padding: 1rem 2rem;
+  min-height: 56px;
+  font-size: 1.2rem;
+  background: linear-gradient(45deg, #558f6d, #96bc73);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.mint-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(45deg, #96bc73, #558f6d);
+}
+
+.mint-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.mint-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+  background: linear-gradient(45deg, #666, #888);
+}
+
+.lucky-draw-button {
+  background: linear-gradient(45deg, #6b4c9a, #9b6dd7);
+  font-size: 1rem;
+}
+
+.lucky-draw-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(45deg, #9b6dd7, #6b4c9a);
+}
+
+.lucky-draw-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.lucky-draw-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+  background: linear-gradient(45deg, #666, #888);
+}
+
+.randao-branding {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1.2rem;
+  font-size: 1.1rem;
+  color: #fff;
+  opacity: 0.9;
+  padding: 0.8rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+}
+
+.randao-branding img {
+  height: 65px;
+  width: auto;
+}
+
+.learn-more-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #9b6dd7;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s;
+  padding: 0.4rem 0.8rem;
+  background: rgba(155, 109, 215, 0.1);
+  border-radius: 6px;
+}
+
+.learn-more-link:hover {
+  color: #b08ee0;
+  background: rgba(155, 109, 215, 0.2);
+}
+
+.learn-more-link img {
+  height: 36px;
+  width: auto;
+}
+
+.circle-progress {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin: 0.8rem auto;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  color: #fff;
+  border: 1px solid rgba(150, 188, 115, 0.3);
+}
+
+.circle-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.circle-inner {
+  position: relative;
+  width: 90%;
+  height: 90%;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  text-align: center;
+  padding: 0.5rem;
+}
+
+.circle-inner .count {
+  font-weight: bold;
+  font-size: 1.1rem;
+  color: #96bc73;
+}
+
+.circle-inner .total {
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(253, 254, 254, 0.9);
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.loading-spinner {
+  border: 5px solid #f3f3f3;
+  border-top: 5px solid #558f6d;
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

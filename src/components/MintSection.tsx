@@ -1,6 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import styled from 'styled-components';
-import { getNftSaleClientAutoConfiguration, INftSaleClient, NftSaleClient, NftSaleClientConfig, processIds, PurchaseNftError } from 'ao-process-clients';
+import { getNftSaleClientAutoConfiguration, INftSaleClient, NftSaleClient, NftSaleClientConfig, PurchaseNftError } from 'ao-process-clients';
+
+import './MintSection.css';
+
+// NFT Sale Client Configuration
+const NFT_SALE_CONFIG: NftSaleClientConfig = {
+  ...getNftSaleClientAutoConfiguration(),
+  processId: "ewO-sg8QM8xK_yM_ERzvbOZ4DCbTGoBK51uZnc3MENw", // Sale contract
+  purchaseAmount: "500000000000",
+  tokenProcessId: "5ZR9uegKoEhE9fJMbs-MvWLIztMNCVxgpzfeBVE3vqI" // wAR token
+};
 
 // ArConnect type declarations
 declare global {
@@ -12,350 +21,6 @@ declare global {
     };
   }
 }
-
-const Container = styled.div`
-  position: fixed;
-  top: 20px;
-  left: 50%;
-  transform: translate(-50%, 0);
-  z-index: 1000;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  pointer-events: auto;
-  background: rgba(0, 0, 0, 0.85);
-  padding: 1.2rem;
-  border-radius: 1rem;
-  backdrop-filter: blur(10px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-  width: min(90vw, 380px);
-`;
-
-const Title = styled.h1`
-  font-size: 3rem;
-  color: #fff;
-  text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-  margin: 0;
-  text-align: center;
-`;
-
-const PhaseInfo = styled.div`
-  color: #fff;
-  margin-bottom: 1rem;
-  text-align: center;
-  width: 100%;
-  
-  .current-phase {
-    font-size: 1.5rem;
-    font-weight: bold;
-    color: #96bc73;
-    margin-bottom: 0.3rem;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-  }
-
-  .price {
-    font-size: 1rem;
-    opacity: 0.9;
-  }
-
-  .phase-note {
-    font-size: 0.9rem;
-    color: #96bc73;
-    font-style: italic;
-  }
-
-  .error-message {
-    font-size: 0.9rem;
-    color: red;
-    margin-top: 10px;
-  }
-`;
-
-const PhaseTimers = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  width: 100%;
-  margin: 0.5rem 0;
-`;
-
-const PhaseTimer = styled.div`
-  background: rgba(0, 0, 0, 0.4);
-  padding: 0.8rem;
-  border-radius: 8px;
-  border: 1px solid rgba(150, 188, 115, 0.3);
-  transition: transform 0.2s ease;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.8rem;
-
-  &:hover {
-    transform: translateY(-2px);
-  }
-
-  .phase-info {
-    flex: 1;
-  }
-
-  .phase-name {
-    font-size: 0.9rem;
-    color: #96bc73;
-    margin-bottom: 0.2rem;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-  }
-
-  .time {
-    font-size: 1.1rem;
-    font-weight: bold;
-    color: #fff;
-    margin-bottom: 0.2rem;
-  }
-
-  .status {
-    font-size: 0.8rem;
-    color: #96bc73;
-    font-style: italic;
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-  }
-
-  .completed {
-    color: #96bc73;
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    
-    &::after {
-      content: '✓';
-      font-size: 1rem;
-      font-weight: bold;
-    }
-  }
-`;
-
-const CountdownTimer = styled.div`
-  color: #96bc73;
-  font-size: 1.5rem;
-  font-weight: bold;
-  margin-bottom: 1rem;
-  text-align: center;
-
-  .label {
-    font-size: 1rem;
-    color: #fff;
-    opacity: 0.8;
-    margin-bottom: 0.3rem;
-  }
-`;
-
-const PhaseProgressBar = styled.div`
-  width: 100%;
-  height: 6px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 4px;
-  margin: 0.8rem 0;
-  position: relative;
-  overflow: hidden;
-`;
-
-const ProgressFill = styled.div<{ width: number }>`
-  position: absolute;
-  top: 0;
-  left: 0;
-  height: 100%;
-  background: linear-gradient(90deg, #558f6d, #96bc73);
-  border-radius: 4px;
-  width: ${props => Math.min(Math.max(props.width, 0), 100)}%;
-  transition: width 0.3s ease;
-`;
-
-const QuantitySelector = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.8rem;
-  margin: 0.8rem 0;
-  background: rgba(0, 0, 0, 0.4);
-  padding: 0.8rem;
-  border-radius: 8px;
-  border: 1px solid rgba(150, 188, 115, 0.3);
-  width: 100%;
-  
-  .quantity {
-    font-size: 1.4rem;
-    font-weight: bold;
-    color: #fff;
-    min-width: 2rem;
-    text-align: center;
-  }
-
-  .max-info {
-    font-size: 0.9rem;
-    color: #96bc73;
-    font-style: italic;
-  }
-`;
-
-const QuantityButton = styled.button<{ direction: 'up' | 'down' }>`
-  background: rgba(150, 188, 115, 0.2);
-  border: 1px solid rgba(150, 188, 115, 0.3);
-  border-radius: 6px;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: #fff;
-  font-size: 1.1rem;
-  transition: all 0.2s;
-
-  &:hover {
-    background: rgba(150, 188, 115, 0.3);
-    transform: translateY(-2px);
-  }
-
-  &:active {
-    transform: translateY(0);
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    transform: none;
-  }
-
-  &::before {
-    content: '${props => props.direction === 'up' ? '↑' : '↓'}';
-  }
-`;
-
-const MintButton = styled.button`
-  width: 100%;
-  padding: 1rem 2rem;
-  font-size: 1.2rem;
-  background: linear-gradient(45deg, #558f6d, #96bc73);
-  border: none;
-  border-radius: 8px;
-  color: white;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-  font-weight: bold;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
-    background: linear-gradient(45deg, #96bc73, #558f6d);
-  }
-
-  &:active {
-    transform: translateY(0);
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-  }
-
-  &:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-    transform: none;
-    background: linear-gradient(45deg, #666, #888);
-  }
-`;
-
-const ButtonsContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin: 0.8rem 0;
-  width: 100%;
-`;
-
-const CircleProgress = styled.div`
-  position: relative;
-  width: 80px;
-  height: 80px;
-  margin: 0.8rem auto;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.9rem;
-  color: #fff;
-  border: 1px solid rgba(150, 188, 115, 0.3);
-`;
-
-const CircleFill = styled.div<{ progress: number }>`
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  background: conic-gradient(
-    #96bc73 ${props => props.progress}%,
-    transparent ${props => props.progress}%
-  );
-  transition: all 0.3s ease;
-`;
-
-const CircleInner = styled.div`
-  position: relative;
-  width: 90%;
-  height: 90%;
-  background: rgba(0, 0, 0, 0.4);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  text-align: center;
-  padding: 0.5rem;
-  
-  .count {
-    font-weight: bold;
-    font-size: 1.1rem;
-    color: #96bc73;
-  }
-  
-  .total {
-    font-size: 0.8rem;
-    opacity: 0.8;
-  }
-`;
-
-const LoadingOverlay = styled.div<{ show: boolean }>`
-  display: ${props => props.show ? 'flex' : 'none'};
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(253, 254, 254, 0.9);
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-`;
-
-const LoadingSpinner = styled.div`
-  border: 5px solid #f3f3f3;
-  border-top: 5px solid #558f6d;
-  border-radius: 50%;
-  width: 50px;
-  height: 50px;
-  animation: spin 1s linear infinite;
-
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-`;
 
 interface MintSectionProps {
   currentPhase: 'OG' | 'FCFS' | 'PUBLIC' | 'NOT_STARTED';
@@ -375,57 +40,36 @@ export function MintSection({ currentPhase, timeLeft }: MintSectionProps) {
   const [nftSaleClient, setNftSaleClient] = useState<INftSaleClient | null>(null);
   const [totalMinted, setTotalMinted] = useState(0);
 
-  // Update total minted NFTs when client is initialized
+  // Initialize client on component mount
   useEffect(() => {
-    const updateTotalMinted = async () => {
-      if (nftSaleClient) {
-        try {
-          const nftsLeft = await nftSaleClient.queryNFTCount();
-          console.log(nftsLeft)
-          const TOTAL_NFTS_AVAILABLE_THIS_ROUND = 333;
-          const NFTS_SOLD_PREVIOUS_SALE = 333; // Constant for NFTs sold in previous sale
+    const init = async () => {
+      try {
+        console.log('Initializing NFT client...');
+        const client = await NftSaleClient.create(NFT_SALE_CONFIG);
+        console.log('NFT client initialized successfully:', client);
+        setNftSaleClient(client);
 
-          const nftsSoldThisRound = Math.abs(nftsLeft - TOTAL_NFTS_AVAILABLE_THIS_ROUND);
-          console.log(nftsSoldThisRound)
-          const totalNftsSold = NFTS_SOLD_PREVIOUS_SALE + nftsSoldThisRound;
-          console.log(nftsSoldThisRound)
-          setTotalMinted(totalNftsSold);
-        } catch (error) {
-          console.error('Failed to update total minted:', error);
+        // Get client info
+        const info = await client.getInfo();
+        console.log('NFT Sale Client Info:', info);
+        
+        // Update total minted
+        const nftsLeft = await client.queryNFTCount();
+        const TOTAL_NFTS_AVAILABLE = 3333;
+        const nftsSold = Math.abs(nftsLeft - TOTAL_NFTS_AVAILABLE);
+        setTotalMinted(nftsSold);
+      } catch (error) {
+        console.error('Failed to initialize client:', error);
+        if (error instanceof Error) {
+          setError(`Failed to initialize NFT client: ${error.message}`);
+        } else {
+          setError('Failed to initialize NFT client: Unknown error');
         }
       }
     };
 
-    updateTotalMinted();
-  }, [nftSaleClient]);
-
-  const initializeClient = async () => {
-    try {
-      console.log('Initializing NFT client...');
-
-      // Initialize client with auto configuration
-      // DONT TOUCH VERY IMPORTANT
-      const config: NftSaleClientConfig = getNftSaleClientAutoConfiguration()
-      config.processId = "y__FX6IgcXDOlOIEZqWZDU1k1dxYSpBICf-wxv25Tj0" // TODO swap to final sale contract
-      config.purchaseAmount = "500000000000"
-      config.tokenProcessId = "5ZR9uegKoEhE9fJMbs-MvWLIztMNCVxgpzfeBVE3vqI" //processIds.WRAPPED_AR_TOKEN_PROCESS_ID //TODO wAR
-      const client = await NftSaleClient.create(config);
-      await client.queryNFTCount()
-      // DONT TOUCH VERY IMPORTANT
-
-      console.log('NFT client initialized successfully:', client);
-      setNftSaleClient(client);
-      return true;
-    } catch (error) {
-      console.error('Failed to initialize NFT client. Detailed error:', error);
-      if (error instanceof Error) {
-        setError(`Failed to initialize NFT client: ${error.message}`);
-      } else {
-        setError('Failed to initialize NFT client: Unknown error');
-      }
-      return false;
-    }
-  };
+    init();
+  }, []); // Run once on mount
 
   const connectWallet = async () => {
     try {
@@ -435,9 +79,7 @@ export function MintSection({ currentPhase, timeLeft }: MintSectionProps) {
         console.log('Successfully connected to Arweave wallet');
         setIsConnected(true);
 
-        // Initialize client after wallet connection
-        const clientInitialized = await initializeClient();
-        return clientInitialized;
+        return true;
       } else {
         const error = 'Arweave wallet not found. Please install Arweave wallet extension.';
         console.error(error);
@@ -470,7 +112,7 @@ export function MintSection({ currentPhase, timeLeft }: MintSectionProps) {
           title: 'FCFS Phase',
           note: 'First come first served',
           price: '1 wAR',
-          maxMint: 3,
+          maxMint: 10,
           showPrice: true
         };
       case 'PUBLIC':
@@ -478,7 +120,7 @@ export function MintSection({ currentPhase, timeLeft }: MintSectionProps) {
           title: 'Public Phase',
           note: 'Open for everyone',
           price: '1 wAR',
-          maxMint: 3,
+          maxMint: 3333,
           showPrice: true
         };
       case 'NOT_STARTED':
@@ -486,34 +128,47 @@ export function MintSection({ currentPhase, timeLeft }: MintSectionProps) {
           title: 'Not Started',
           note: 'Minting will start soon',
           price: '',
-          maxMint: 3,
+          maxMint: 0,
           showPrice: false
         };
     }
   };
 
+  const formatDate = (date: Date) => {
+    return date.toLocaleString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'UTC',
+      hour12: false
+    }).replace(',', '') + ' UTC';
+  };
+
+  // Phase timing configuration
+  const OG_PHASE_DURATION = 6 * 60 * 60 * 1000; // 6 hours in milliseconds
+  const FCFS_PHASE_DURATION = 12 * 60 * 60 * 1000; // 12 hours in milliseconds
+
+  // Base start time for all phases
+  const ogStartTime = new Date(Date.UTC(2025, 1, 9, 17, 0, 0));  // Feb 9th, 17:00 UTC
+  const fcfsStartTime = new Date(ogStartTime.getTime() + OG_PHASE_DURATION);
+  const publicStartTime = new Date(fcfsStartTime.getTime() + FCFS_PHASE_DURATION);
+
   const getPhaseStatus = () => {
     const currentTime = new Date();
 
-    // Phase start and end times
-    const ogStartTime = new Date(Date.UTC(2025, 1, 7, 17, 0, 0));  // Feb 7th, 17:00 UTC
-    const ogEndTime = new Date(Date.UTC(2025, 1, 9, 17, 0, 0));    // Feb 9th, 17:00 UTC (48 hours later)
-    const fcfsEndTime = new Date(Date.UTC(2025, 1, 7, 19, 0, 0));  // Feb 7th, 19:00 UTC (2 hours after start)
-
     const hasStarted = currentTime >= ogStartTime;
-    const ogPhaseActive = currentTime >= ogStartTime && currentTime < ogEndTime;
-    const fcfsPhaseActive = currentTime >= ogStartTime && currentTime < fcfsEndTime;
-    const publicPhaseActive = currentTime >= fcfsEndTime;
+    const publicPhaseActive = currentTime >= publicStartTime;
 
-    const ogPhaseCompleted = currentTime >= ogEndTime;
-    const fcfsPhaseCompleted = currentTime >= fcfsEndTime;
+    const ogPhaseCompleted = currentTime >= fcfsStartTime;
+    const fcfsPhaseCompleted = currentTime >= publicStartTime;
 
     return {
       og: {
         name: 'OG Phase',
-        status: !hasStarted ? 'Starts 7th Feb 17:00 UTC' :
+        status: !hasStarted ? `Starts ${formatDate(ogStartTime)}` :
           ogPhaseCompleted ? 'Completed' :
-            'Active - Guaranteed Mint (48 Hours)',
+            'Active - Guaranteed Mint (6 Hours)',
         time: !hasStarted ? timeLeft.og :
           ogPhaseCompleted ? '' : timeLeft.og,
         label: !hasStarted ? 'Time Until Start' :
@@ -522,9 +177,9 @@ export function MintSection({ currentPhase, timeLeft }: MintSectionProps) {
       },
       fcfs: {
         name: 'FCFS Phase',
-        status: !hasStarted ? 'Starts 7th Feb 17:00 UTC' :
+        status: !hasStarted ? `Starts ${formatDate(fcfsStartTime)}` :
           fcfsPhaseCompleted ? 'Completed' :
-            'Active - First Come First Served (2 Hours)',
+            'Active - First Come First Served (12 Hours)',
         time: !hasStarted ? timeLeft.fcfs :
           fcfsPhaseCompleted ? '' : timeLeft.fcfs,
         label: !hasStarted ? 'Time Until Start' :
@@ -533,7 +188,7 @@ export function MintSection({ currentPhase, timeLeft }: MintSectionProps) {
       },
       public: {
         name: 'Public Phase',
-        status: publicPhaseActive ? 'Active - Open for Everyone (1 Week)' : 'Starts 7th Feb 19:00 UTC',
+        status: publicPhaseActive ? 'Active - Open for Everyone' : `Starts ${formatDate(publicStartTime)}`,
         time: !publicPhaseActive && timeLeft.public ? timeLeft.public : '',
         label: !publicPhaseActive && timeLeft.public ? 'Time Until Start' : '',
         completed: false
@@ -563,14 +218,16 @@ export function MintSection({ currentPhase, timeLeft }: MintSectionProps) {
       const timeLeftParts = timeLeft[phaseKey].split(' ');
       const [hours, minutes, seconds] = timeLeftParts[0].split('h')[0].split(':');
       const totalSeconds = parseInt(hours) * 3600 + parseInt(minutes) * 60 + parseInt(seconds);
-      // Phase duration is 2 hours (7200 seconds)
-      const totalPhaseSeconds = 2 * 3600;
+      // Get phase duration based on current phase
+      const totalPhaseSeconds = currentPhase === 'OG' ? 6 * 3600 : // 6 hours for OG
+                               currentPhase === 'FCFS' ? 12 * 3600 : // 12 hours for FCFS
+                               24 * 3600; // 24 hours for PUBLIC
       return `${((totalPhaseSeconds - totalSeconds) / totalPhaseSeconds) * 100}%`;
     }
     return '0%';
   };
 
-  const handleMint = async (): Promise<void> => {
+  const handleMint = async (isLuckyDraw: boolean = false): Promise<void> => {
     try {
       setIsLoading(true);
       setError(null);
@@ -585,6 +242,15 @@ export function MintSection({ currentPhase, timeLeft }: MintSectionProps) {
       if (!nftSaleClient) {
         setError('NFT client not initialized');
         return;
+      }
+
+      if (isLuckyDraw) {
+        // 20% chance of success for lucky draw
+        const randomChance = Math.random();
+        if (randomChance > 0.2) {
+          setError('Better luck next time! (80% chance of failure)');
+          return;
+        }
       }
 
       // Purchase NFTs based on quantity
@@ -615,8 +281,8 @@ export function MintSection({ currentPhase, timeLeft }: MintSectionProps) {
 
   return (
     <>
-      <Container>
-        <PhaseInfo>
+      <div className="mint-container">
+        <div className="phase-info">
           <div className="current-phase">{getPhaseInfo(currentPhase).title}</div>
           {getPhaseInfo(currentPhase).showPrice && (
             <div className="price">Price: {getPhaseInfo(currentPhase).price}</div>
@@ -629,12 +295,17 @@ export function MintSection({ currentPhase, timeLeft }: MintSectionProps) {
               {error}
             </div>
           )}
-        </PhaseInfo>
+        </div>
 
-        <PhaseTimers>
-          <PhaseTimer>
+        <div className="phase-timers">
+          <div className="phase-timer">
             <div className="phase-info">
-              <div className="phase-name">{getPhaseStatus().og.name}</div>
+              <div className="phase-name">
+                {getPhaseStatus().og.name}
+                <div style={{ fontSize: '0.8rem', color: '#fff', opacity: 0.8 }}>
+                  0.5 wAR • Max 3 per wallet
+                </div>
+              </div>
               {getPhaseStatus().og.time && (
                 <div className="time">
                   {getPhaseStatus().og.label}: {getPhaseStatus().og.time}
@@ -644,11 +315,16 @@ export function MintSection({ currentPhase, timeLeft }: MintSectionProps) {
                 {getPhaseStatus().og.status}
               </div>
             </div>
-          </PhaseTimer>
+          </div>
 
-          <PhaseTimer>
+          <div className="phase-timer">
             <div className="phase-info">
-              <div className="phase-name">{getPhaseStatus().fcfs.name}</div>
+              <div className="phase-name">
+                {getPhaseStatus().fcfs.name}
+                <div style={{ fontSize: '0.8rem', color: '#fff', opacity: 0.8 }}>
+                  1 wAR • Max 10 per wallet
+                </div>
+              </div>
               {getPhaseStatus().fcfs.time && (
                 <div className="time">
                   {getPhaseStatus().fcfs.label}: {getPhaseStatus().fcfs.time}
@@ -658,11 +334,16 @@ export function MintSection({ currentPhase, timeLeft }: MintSectionProps) {
                 {getPhaseStatus().fcfs.status}
               </div>
             </div>
-          </PhaseTimer>
+          </div>
 
-          <PhaseTimer>
+          <div className="phase-timer">
             <div className="phase-info">
-              <div className="phase-name">{getPhaseStatus().public.name}</div>
+              <div className="phase-name">
+                {getPhaseStatus().public.name}
+                <div style={{ fontSize: '0.8rem', color: '#fff', opacity: 0.8 }}>
+                  1 wAR • No max limit
+                </div>
+              </div>
               {getPhaseStatus().public.time && (
                 <div className="time">
                   {getPhaseStatus().public.label}: {getPhaseStatus().public.time}
@@ -672,54 +353,103 @@ export function MintSection({ currentPhase, timeLeft }: MintSectionProps) {
                 {getPhaseStatus().public.status}
               </div>
             </div>
-          </PhaseTimer>
-        </PhaseTimers>
+          </div>
+        </div>
 
         {(currentPhase === 'OG' || currentPhase === 'FCFS' || currentPhase === 'PUBLIC') && (
           <>
-            <QuantitySelector>
-              <QuantityButton
-                direction="down"
+            <div className="quantity-selector">
+              <button
+                className="quantity-button down"
                 onClick={() => handleQuantityChange(false)}
                 disabled={quantity <= 1 || isLoading || !isMintingEnabled()}
               />
               <div className="quantity">{quantity}</div>
-              <QuantityButton
-                direction="up"
+              <button
+                className="quantity-button up"
                 onClick={() => handleQuantityChange(true)}
                 disabled={quantity >= getPhaseInfo(currentPhase).maxMint || isLoading || !isMintingEnabled()}
               />
               <div className="max-info">Max {getPhaseInfo(currentPhase).maxMint}</div>
-            </QuantitySelector>
+            </div>
 
-            <PhaseProgressBar>
-              <ProgressFill width={parseFloat(getPhaseProgress())} />
-            </PhaseProgressBar>
+            <div className="phase-progress-bar">
+              <div 
+                className="progress-fill" 
+                style={{ width: getPhaseProgress() }}
+              />
+            </div>
           </>
         )}
 
-        <ButtonsContainer>
-          <MintButton onClick={handleMint} disabled={isLoading || !isMintingEnabled()}>
-            {isLoading ? 'Processing...' : (isConnected ? `Mint ${quantity} Now` : 'Connect & Mint')}
-          </MintButton>
-        </ButtonsContainer>
+        <div className="buttons-container">
+          <div className="mint-section">
+            <div className="full-price-text">
+              Pay Full Price - Guaranteed Mint
+            </div>
+            <button 
+              className="mint-button" 
+              onClick={() => handleMint(false)} 
+              disabled={isLoading || !isMintingEnabled()}
+            >
+              {isLoading ? 'Processing...' : (isConnected ? `Mint ${quantity} Now` : 'Connect & Mint')}
+            </button>
+            <div className="total-price">
+              Total: {(quantity * (currentPhase === 'OG' ? 0.5 : 1)).toFixed(2)} wAR
+            </div>
+          </div>
+          
+          <div className="lucky-section">
+            <div className="lucky-message">
+              Try your luck! 80% discount with 20% success rate 🍀
+            </div>
+            <button 
+              className="lucky-draw-button" 
+              onClick={() => handleMint(true)} 
+              disabled={isLoading || !isMintingEnabled()}
+            >
+              {`${quantity}x Lucky Draw`}
+            </button>
+            <div className="total-price">
+              Total: {(quantity * 0.2).toFixed(2)} wAR
+            </div>
+            <div className="randao-branding">
+              <span>Powered by</span>
+              <img src="/randao.png" alt="RANDAO" />
+              <a 
+                href="https://randao.ar.io" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="learn-more-link"
+              >
+                Learn More
+                <img src="/rng-logo.svg" alt="RNG" />
+              </a>
+            </div>
+          </div>
+        </div>
 
-        <CircleProgress>
-          <CircleFill progress={(totalMinted / 3333) * 100} />
-          <CircleInner>
+        <div className="circle-progress">
+          <div 
+            className="circle-fill" 
+            style={{ 
+              background: `conic-gradient(#96bc73 ${(totalMinted / 3333) * 100}%, transparent ${(totalMinted / 3333) * 100}%)` 
+            }} 
+          />
+          <div className="circle-inner">
             <div className="count">{totalMinted}</div>
             <div className="total">/ 3333</div>
-          </CircleInner>
-        </CircleProgress>
-      </Container>
+          </div>
+        </div>
+      </div>
 
-      <LoadingOverlay show={isLoading || showSuccess}>
+      <div className="loading-overlay" style={{ display: (isLoading || showSuccess) ? 'flex' : 'none' }}>
         {isLoading ? (
-          <LoadingSpinner />
+          <div className="loading-spinner" />
         ) : (
           showSuccess && <h2 style={{ color: '#558f6d' }}>Successfully Minted!</h2>
         )}
-      </LoadingOverlay>
+      </div>
     </>
   );
 }
