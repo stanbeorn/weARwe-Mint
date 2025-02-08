@@ -40,6 +40,15 @@ export function MintSection({ currentPhase, timeLeft }: MintSectionProps) {
   const [whitelistZones, setWhitelistZones] = useState<number[]>([]);
   const [purchaseLimits, setPurchaseLimits] = useState<[number, Record<string, number>][]>([]);
 
+  // Helper function to handle errors
+  const handleError = (error: unknown, isInitError: boolean = false) => {
+    console.error('Error occurred:', error);
+    // Only set UI error if it's not an initialization error
+    if (!isInitError) {
+      setError(error instanceof Error ? error.message : 'An error occurred');
+    }
+  };
+
   // Function to fetch and update client info
   const fetchClientInfo = async (client: INftSaleClient) => {
     try {
@@ -128,6 +137,7 @@ export function MintSection({ currentPhase, timeLeft }: MintSectionProps) {
       return true;
     } catch (error) {
       console.error('Failed to fetch client info:', error);
+      handleError(error, true); // Pass true to indicate this is an initialization error
       return false;
     }
   };
@@ -206,11 +216,8 @@ export function MintSection({ currentPhase, timeLeft }: MintSectionProps) {
         }, BASE_INTERVAL);
       } catch (error) {
         console.error('Failed to initialize client:', error);
-        if (error instanceof Error) {
-          setError(`Failed to initialize NFT client: ${error.message}`);
-        } else {
-          setError('Failed to initialize NFT client: Unknown error');
-        }
+        handleError(error, true); // Pass true to indicate this is an initialization error
+        console.error('NFT client initialization error:', error instanceof Error ? error.message : 'Unknown error');
       }
     };
 
@@ -234,6 +241,7 @@ export function MintSection({ currentPhase, timeLeft }: MintSectionProps) {
         console.log('Wallet address:', address);
         setIsConnected(true);
         setWalletAddress(address);
+        setError(null); // Clear any previous errors
 
         // Refresh data after wallet connection
         if (nftSaleClient) {
@@ -244,15 +252,19 @@ export function MintSection({ currentPhase, timeLeft }: MintSectionProps) {
       } else {
         const error = 'Arweave wallet not found. Please install Arweave wallet extension.';
         console.error(error);
-        setError(error);
+        setError(error); // Show this error as it's a user-actionable error
         return false;
       }
     } catch (error) {
       console.error('Failed to connect wallet. Detailed error:', error);
-      if (error instanceof Error) {
-        setError(`Failed to connect wallet: ${error.message}`);
+      // Only show user-facing wallet connection errors
+      if (error instanceof Error && error.message.includes('User rejected')) {
+        setError('Wallet connection was rejected. Please try again.');
+      } else if (!window.arweaveWallet) {
+        setError('Arweave wallet not found. Please install Arweave wallet extension.');
       } else {
-        setError('Failed to connect wallet: Unknown error');
+        // Don't show technical errors to the user
+        console.error('Wallet connection error:', error);
       }
       return false;
     }
