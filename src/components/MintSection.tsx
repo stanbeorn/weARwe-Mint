@@ -563,12 +563,6 @@ export function MintSection({ currentPhase, timeLeft }: MintSectionProps) {
               </div>
               
               <div className="lucky-section">
-                <div className="lucky-message">
-                  Try your luck! <span className="discount">80% discount</span> with 20% success rate 🍀
-                </div>
-                <div className="disclaimer">
-                  *Only successful draws count towards your total purchase limit
-                </div>
                 <button 
                   className="lucky-draw-button" 
                   onClick={() => handleMint(true)} 
@@ -576,6 +570,12 @@ export function MintSection({ currentPhase, timeLeft }: MintSectionProps) {
                 >
                   {`${quantity}x Lucky Draw`}
                 </button>
+                <div className="lucky-message">
+                  Try your luck! <span className="discount">80% discount</span> with 20% success rate 🍀
+                </div>
+                <div className="disclaimer">
+                  *Only successful draws count towards your total purchase limit
+                </div>
                 <div className="randao-branding">
                   <span>Powered by</span>
                   <img src="/randao.png" alt="RANDAO" />
